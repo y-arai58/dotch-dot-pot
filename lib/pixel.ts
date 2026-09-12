@@ -4,9 +4,10 @@ export type Direction = typeof DIRECTIONS[number];
 export type V3 = [number,number,number];
 export type Part = { id:string; shape:'box'|'ellipsoid'|'cylinder'|'cone'; position:V3; size:V3; color:string; rotation?:V3 };
 export type Model = { id:string; name:string; prompt:string; features:string[]; parts:Part[] };
-export type Triangle = { vertices:[V3,V3,V3]; color:string; uv?:[[number,number],[number,number],[number,number]]; texture?:string };
+export type Influence = {bone:string;weight:number};
+export type Triangle = { vertices:[V3,V3,V3]; color:string; uv?:[[number,number],[number,number],[number,number]]; texture?:string; partId?:string; weights?:[Influence[],Influence[],Influence[]] };
 export type Texture = {width:number;height:number;data:Uint8ClampedArray};
-export type Mesh = {triangles:Triangle[];textures?:Record<string,Texture>};
+export type Mesh = {triangles:Triangle[];textures?:Record<string,Texture>;parts?:{id:string;name:string}[];skeleton?:{id:string;parent?:string;pivot:V3}[]};
 export type Style = {id:string;name:string;palette:string[];light:number;lightHeight:number;elevation:number;outline:boolean;shadow:boolean;scale:number;anchor:[number,number]};
 export type Frame = {direction:Direction;body:number[];shadow:number[];clipped:boolean};
 export type Revision = {id:string;rendererVersion?:string;createdAt:string;style:Style;frames:Frame[];baseFrames:Frame[];approved:boolean;reviewed:boolean;issues:string;mode:'front'|'eight';source:'sample'|'tripo'|'import';modelId:string;features:string[];name:string;prompt:string;facing:number;size:number;modelKey?:string;referenceKeys?:string[]};
@@ -46,9 +47,9 @@ export function buildMesh(model:Model):Mesh{
    faces.push(Array.from({length:segments},(_,i)=>segments-1-i),Array.from({length:segments},(_,i)=>segments+i));
   }
   const world=vertices.map(v=>{const t=rotate(v.map((n,i)=>n*p.size[i]) as V3,p.rotation??[0,0,0]);return t.map((n,i)=>n+p.position[i]) as V3;});
-  for(const face of faces)for(let i=1;i<face.length-1;i++)triangles.push({vertices:[world[face[0]],world[face[i]],world[face[i+1]]],color:p.color});
+  for(const face of faces)for(let i=1;i<face.length-1;i++)triangles.push({vertices:[world[face[0]],world[face[i]],world[face[i+1]]],color:p.color,partId:p.id});
  }
- return {triangles};
+ return {triangles,parts:model.parts.map(p=>({id:p.id,name:p.id}))};
 }
 export function renderFrame(mesh:Mesh,style:Style,direction:Direction,size=1,facing=0):Frame{
  const body=new Array<number>(4096).fill(0),shadow=new Array<number>(4096).fill(0),depth=new Float64Array(4096).fill(-Infinity);
