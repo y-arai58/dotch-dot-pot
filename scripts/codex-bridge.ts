@@ -4,14 +4,14 @@ import {mkdir,readFile,writeFile,rename,readdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
-import {generationRequestSchema,type GenerationRequest,type CreationArtifact} from '../lib/generation';
-import {connectedAccount} from './codex-rpc';
+import {generationRequestSchema,type GenerationRequest,type CreationArtifact,type GenerationActivity} from '../lib/generation';
+import {connectedAccount,GenerationTimeoutError} from './codex-rpc';
 import {generateCharacter} from './codex-runner';
-type LocalJob={id:string;origin:string;digest:string;state:'running'|'ready'|'failed'|'cancelled';progress:number;error?:string;artifact?:CreationArtifact};
+type LocalJob={id:string;origin:string;digest:string;state:'running'|'ready'|'failed'|'cancelled';progress:number;activity?:GenerationActivity;error?:string;artifact?:CreationArtifact};
 type Reference={side:string;data:string};
-type Runner=(request:GenerationRequest,references:Reference[],directory:string,signal:AbortSignal,progress:(n:number)=>void)=>Promise<CreationArtifact>;
+type Runner=(request:GenerationRequest,references:Reference[],directory:string,signal:AbortSignal,progress:(n:number,activity?:GenerationActivity)=>void)=>Promise<CreationArtifact>;
 const publicJob=({origin,digest,...job}:LocalJob)=>job;
-const publicError=(e:unknown)=>e instanceof Error&&/^(品質確認|生成を停止|この端末で codex login|Codexとの接続が切れ)/.test(e.message)?e.message.slice(0,1500):'Codexで作成を完了できませんでした。接続・ログイン・モデルの対応状況を確認してください';
+const publicError=(e:unknown)=>e instanceof GenerationTimeoutError?e.message:e instanceof Error&&/^(品質確認|生成を停止|この端末で codex login|Codexとの接続が切れ)/.test(e.message)?e.message.slice(0,1500):'Codexで作成を完了できませんでした。接続・ログイン・モデルの対応状況を確認してください';
 const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export async function startBridge({port=43117,origins=['https://dotforge-studio.y-arai-dev222.chatgpt.site','http://localhost:5173','http://localhost:5174'],directory=join(homedir(),'.dotforge'),runner=generateCharacter,status=connectedAccount}:{port?:number;origins?:string[];directory?:string;runner?:Runner;status?:typeof connectedAccount}={}){
  await mkdir(join(directory,'jobs'),{recursive:true,mode:0o700});
@@ -43,7 +43,7 @@ export async function startBridge({port=43117,origins=['https://dotforge-studio.
     if(old){if(old.origin!==origin||old.digest!==hash){respond(res,409,{error:'同じ依頼IDの内容が一致しません'});return;}respond(res,200,publicJob(old));return;}
     if(active.size){respond(res,409,{error:'この端末で作成中です。完了を待ってください'});return;}
     const job:LocalJob={id:request.id,origin,digest:hash,state:'running',progress:0};jobs.set(job.id,job);const controller=new AbortController();active.set(job.id,controller);try{await save(job);}catch(e){active.delete(job.id);jobs.delete(job.id);throw e;}
-    void runner(request,references,join(directory,'jobs',job.id),controller.signal,n=>{if(job.state==='running')job.progress=n;}).then(result=>{if(job.state==='running'){job.artifact=result;job.state='ready';job.progress=100;}}).catch(e=>{if(job.state==='running'){job.state='failed';job.error=publicError(e);}}).finally(async()=>{active.delete(job.id);await save(job).catch(()=>{job.state='failed';job.error='結果を保存できませんでした';});});
+    void runner(request,references,join(directory,'jobs',job.id),controller.signal,(n,activity)=>{if(job.state==='running'){job.progress=n;if(activity)job.activity=activity;}}).then(result=>{if(job.state==='running'){job.artifact=result;job.state='ready';job.progress=100;}}).catch(e=>{if(job.state==='running'){job.state='failed';job.error=publicError(e);}}).finally(async()=>{await save(job).catch(()=>{job.state='failed';job.error='結果を保存できませんでした';});active.delete(job.id);});
     respond(res,202,publicJob(job));return;
    }
    respond(res,404,{error:'この操作には対応していません'});

@@ -38,7 +38,8 @@ export async function motionModelIssues(model:RiggedModel,style:Style){
  }
  return [];
 }
-export type GenerationJob={id:string;state:string;progress:number;modelFile?:string;error?:string;createdAt:string;request:GenerationRequest};
+export type GenerationActivity={phase:'model'|'render'|'review';attempt:number;lastActivityAt:string};
+export type GenerationJob={id:string;state:string;progress:number;activity?:GenerationActivity;modelFile?:string;error?:string;createdAt:string;request:GenerationRequest};
 export type HumanoidArtifact={kind:'rigged-humanoid-v1';skillVersion:string;model:RiggedModel;validation:{renderer:string;motion:string;frames:number;issues:string[]};visualReview:string};
 
 export type AnimalArtifact={kind:'rigged-quadruped-v1';skillVersion:string;model:AnimalModel;validation:HumanoidArtifact['validation'];visualReview:string};

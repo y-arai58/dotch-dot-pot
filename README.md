@@ -74,6 +74,10 @@ app-serverはread-only / approval never、shell・Web・Apps・plugins・browser
 
 画面を閉じてもbridgeが動いていれば作成は続きます。再接続後は同じ依頼IDで結果を復元し、重複実行しません。停止はturn/interruptへ伝え、遅れて届いた成果は採用しません。bridge再起動時の未完了依頼は失敗とし、自動再送しません。作業データは `~/.dotforge/jobs` に残します。任意の保存先は `DOTFORGE_HOME` で設定できます。
 
+生成中はapp serverの生成・推論・item通知を読み続け、応答のたびに待機を延長します。従来の一律12分の打切りはありません。20分間の無応答または1工程60分で待機を終了し、利用者の停止と区別した理由を返します。モデル・reasoning設定・品質確認回数は変更しません。画面には形状作成、全動作の検証、画像確認の工程と最終応答時刻を表示します。
+
+失敗・停止した依頼の「同じ内容で再依頼」は、元の説明・skill・スタイル・参照を新しい依頼IDで送ります。作成中の依頼がある間は再依頼できません。送信済みIDの「再送・確認」は実行を増やさず、状態や結果だけを復元します。端末には依頼の `request.json` と工程・時刻・通知名だけの `activity.jsonl` を保存し、推論本文・認証情報・参照画像は診断ログに記録しません。
+
 単独のskill検証は `node skills/dotforge-humanoid/scripts/check.mjs --studio . --model path/to/model.json --out path/to/review` で実行します。実生成を伴う確認は通常テストに含めず、明示的に `DOTFORGE_LIVE_TEST=1 node --import tsx scripts/smoke-codex.ts` を実行した場合だけCodexの利用枠を使います。
 
 人型と動物は `CREATION_SKILLS` から専用の入出力schema・骨格・検証器へ振り分けます。未登録skillは両側で拒否します。

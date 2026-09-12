@@ -1,7 +1,7 @@
-import type {GenerationRequest,CreationArtifact} from './generation';
+import type {GenerationRequest,CreationArtifact,GenerationActivity} from './generation';
 export const BRIDGE_ORIGIN='http://127.0.0.1:43117';
 const SESSION_KEY='dotforge.codex.session.v1';
-export type BridgeJob={id:string;state:'running'|'ready'|'failed'|'cancelled';progress:number;error?:string;artifact?:CreationArtifact};
+export type BridgeJob={id:string;state:'running'|'ready'|'failed'|'cancelled';progress:number;activity?:GenerationActivity;error?:string;artifact?:CreationArtifact};
 export class BridgeError extends Error{constructor(message:string,public status:number){super(message);}}
 export async function bridge<T>(path:string,body?:unknown):Promise<T>{
  const token=sessionStorage.getItem(SESSION_KEY);

@@ -9,6 +9,7 @@ import {inspectHumanoid,artifact} from '../scripts/humanoid-quality';
 import {generationRequestSchema,parseHumanoid} from '../lib/generation';
 import {DEFAULT_STYLE,clone} from '../lib/pixel';
 import samples from '../lib/animation-samples.json';
+import {GenerationTimeoutError} from '../scripts/codex-rpc';
 
 const request={id:'character-1',projectId:'project-1',skillId:'humanoid',name:'テスト',prompt:'港町の修理技師',features:['ゴーグル'],mode:'eight',style:DEFAULT_STYLE,referenceKeys:[],referenceSides:[]};
 test('人型専用の入力契約は別skill・任意実行入力・欠けた骨・重複パーツを拒否',()=>{
@@ -61,5 +62,22 @@ test('bridgeの再起動では中断した依頼を再生成せず、失敗状�
  const instance=await startBridge({port:0,origins:[origin],directory,runner:async()=>{calls++;throw Error('unexpected generation');},status:async()=>({ready:true,message:'test'})});
  try{const url=`http://127.0.0.1:${(instance.server.address() as any).port}`;const response=await fetch(url+'/session',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'});const {token}=await response.json() as any;
  const job=await (await fetch(url+'/jobs/'+id,{headers:{Origin:origin,Authorization:'Bearer '+token}})).json() as any;assert.equal(job.state,'failed');assert.equal(calls,0);assert.equal(JSON.parse(await readFile(join(directory,'jobs',id,'job.json'),'utf8')).state,'failed');
+ }finally{await instance.close();}
+});
+
+test('無応答の理由と工程を返し、旧IDでは再実行せず新IDで同じ内容を再依頼できる',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'dotforge-timeout-')),origin='https://studio.example';let calls=0;
+ const activity={phase:'model' as const,attempt:0,lastActivityAt:'2026-09-13T00:00:00Z'};
+ const instance=await startBridge({port:0,origins:[origin],directory,runner:async(_r,_refs,_dir,_signal,progress)=>{calls++;progress(10,activity);throw new GenerationTimeoutError('idle');},status:async()=>({ready:true,message:'test'})});
+ const url=`http://127.0.0.1:${(instance.server.address() as any).port}`,headers={Origin:origin,'Content-Type':'application/json',Authorization:''};
+ const post=(path:string,body:unknown)=>fetch(url+path,{method:'POST',headers,body:JSON.stringify(body)});
+ try{
+  headers.Authorization='Bearer '+((await (await post('/session',{})).json()) as any).token;
+  assert.equal((await post('/jobs',{request,references:[]})).status,202);
+  for(let i=0;i<50;i++){const saved=JSON.parse(await readFile(join(directory,'jobs',request.id,'job.json'),'utf8'));if(saved.state==='failed')break;await new Promise(r=>setTimeout(r,5));}
+  const failed=await (await fetch(url+'/jobs/'+request.id,{headers})).json() as any;
+  assert.equal(failed.state,'failed');assert.match(failed.error,/応答が20分間途絶え/);assert.deepEqual(failed.activity,activity);
+  assert.equal((await post('/jobs',{request,references:[]})).status,200);assert.equal(calls,1);
+  assert.equal((await post('/jobs',{request:{...request,id:'retry-1'},references:[]})).status,202);assert.equal(calls,2);
  }finally{await instance.close();}
 });
