@@ -50,13 +50,13 @@ export function pawTrajectory(clip:AnimalClip,paw:Paw,phase:number){
  return {y,z:clip.lift*Math.sin(Math.PI*t)**2,contact};
 }
 export function animalPose(rig:AnimalRig,clip:AnimalClip,frame:number):AnimalPose{
- const issues=animalRigIssues(rig);if(issues.length)throw Error(issues[0]);
+ const issues=animalRigIssues(rig);if(issues.length)throw Error(issues[0]);if(clip.id==='walk'&&clip.frames<8)issues.push('四足歩行は8コマ以上にしてください');
  const bind=Object.fromEntries(rig.bones.map(b=>[b.id,b.pivot])) as Record<AnimalBone,V3>,bones={} as AnimalPose['bones'],contacts=Object.fromEntries(PAWS.map(p=>[p,true])) as Record<Paw,boolean>;
  const phase=animalPhase(clip,frame),tau=phase*2*Math.PI;let drop=0,rootHeight=0,lean=0;
  if(clip.id==='idle')drop=.006*(1-Math.cos(tau));
  if(clip.id==='walk')drop=.025+.008*(1-Math.cos(4*tau));
  if(clip.id==='crouch'){const edge=(1-clip.hold)/2,amount=phase<edge?smooth(phase/edge):phase>1-edge?smooth((1-phase)/edge):1;drop=clip.depth*amount;lean=3*amount;}
- if(clip.id==='jump'){if(phase<.2)drop=clip.depth*.5*smooth(phase/.2);else if(phase<.75){const u=(phase-.2)/.55;rootHeight=clip.height*4*u*(1-u);drop=clip.depth*.5*(1-smooth(u/.18));for(const paw of PAWS)contacts[paw]=false;}else{const u=(phase-.75)/.25;drop=clip.depth*.4*Math.sin(Math.PI*u);}}
+ if(clip.id==='jump'){if(phase<.2)drop=clip.depth*.5*smooth(phase/.2);else if(phase<.75){const u=(phase-.2)/.55;rootHeight=clip.height*4*u*(1-u);drop=clip.depth*.5*(1-smooth(u/.18));if(rootHeight>1e-8)for(const paw of PAWS)contacts[paw]=false;}else{const u=(phase-.75)/.25;drop=clip.depth*.4*Math.sin(Math.PI*u);}}
  function child(id:AnimalBone,rotation:Quat=I){const parent=ANIMAL_PARENTS[id];if(!parent){bones[id]={position:[0,0,rootHeight],rotation:I};return;}const p=bones[parent];bones[id]={position:add(p.position,qRotate(sub(bind[id],bind[parent]),p.rotation)),rotation:qMultiply(p.rotation,rotation)};}
  child('root');child('body',qEuler([lean,0,0]));bones.body.position[2]-=drop;child('chest');child('neck',qEuler([-lean,0,0]));child('head');child('tailBase',qEuler([0,0,Math.sin(tau)*clip.tailSwing]));child('tailTip',qEuler([0,0,Math.sin(tau-.4)*clip.tailSwing*.5]));
  for(const group of ['front','hind'] as const)for(const side of ['L','R'] as const){const upper=`${group}Upper${side}` as AnimalBone,lower=`${group}Lower${side}` as AnimalBone,paw=`${group}Paw${side}` as Paw;child(upper);let target=add(bind[paw],[0,0,rootHeight]);if(clip.id==='walk'){const trajectory=pawTrajectory(clip,paw,phase);target=add(target,[0,trajectory.y,trajectory.z]);contacts[paw]=trajectory.contact;}

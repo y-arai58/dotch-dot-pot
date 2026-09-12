@@ -31,6 +31,7 @@ test('四足の保存とPNG出力は19関節・接地イベント・速度・時
  assert.equal(meta.motionVersion,ANIMAL_MOTION_VERSION);assert.equal(meta.rig.bones.length,19);
  const walk=meta.clips.find((c:any)=>c.id==='walk');assert.equal(walk.frameCount,16);assert.ok(Math.abs(walk.recommendedSpeed-.24)<1e-12);assert.equal(walk.sheetSize.width,1024);assert.equal(walk.sheetSize.height,512);assert.ok(walk.events.some((e:any)=>e.name==='frontPawL_contact'));
  const raw=Buffer.from(files['walk/spritesheet.png']);assert.equal(raw.readUInt32BE(16),1024);assert.equal(raw.readUInt32BE(20),512);
+ const undersampled=clone(doc);undersampled.config.clips.find(c=>c.id==='walk')!.frames=4;assert.equal(animalAnimationSchema.safeParse(undersampled).success,false);
  const corrupt=clone(doc);corrupt.baked[0].frames[0][0].body='b:AAAA';assert.ok(animalAnimationIssues(corrupt).length);
  const wrongKey=clone(doc);wrongKey.config.clips[0].keys.frontPawL=[{frame:0,rotation:[90,0,0]}];assert.ok(animalAnimationIssues(wrongKey).some(s=>s.includes('接地')));
 });
