@@ -1,0 +1,2 @@
+# Set only in the server environment. Never use a NEXT_PUBLIC_ prefix.
+TRIPO_API_KEY=
