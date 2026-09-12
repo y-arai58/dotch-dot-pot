@@ -54,3 +54,12 @@ test('bridgeは最初の保存失敗後に生成枠を解放する',async()=>{
  const url=`http://127.0.0.1:${(instance.server.address() as any).port}`,headers={Origin:origin,'Content-Type':'application/json',Authorization:''};const post=async(path:string,body:unknown)=>fetch(url+path,{method:'POST',headers,body:JSON.stringify(body)});
  try{headers.Authorization='Bearer '+((await (await post('/session',{})).json()) as any).token;assert.equal((await post('/jobs',{request,references:[]})).status,400);assert.equal((await post('/jobs',{request:{...request,id:'character-2'},references:[]})).status,202);assert.equal(calls,1);}finally{await instance.close();}
 });
+
+test('bridgeの再起動では中断した依頼を再生成せず、失敗状態をディスクにも保存する',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'dotforge-recovery-')),origin='https://studio.example',id='interrupted-job';let calls=0;
+ await mkdir(join(directory,'jobs',id),{recursive:true});await writeFile(join(directory,'jobs',id,'job.json'),JSON.stringify({id,origin,digest:'test',state:'running',progress:40}));
+ const instance=await startBridge({port:0,origins:[origin],directory,runner:async()=>{calls++;throw Error('unexpected generation');},status:async()=>({ready:true,message:'test'})});
+ try{const url=`http://127.0.0.1:${(instance.server.address() as any).port}`;const response=await fetch(url+'/session',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'});const {token}=await response.json() as any;
+ const job=await (await fetch(url+'/jobs/'+id,{headers:{Origin:origin,Authorization:'Bearer '+token}})).json() as any;assert.equal(job.state,'failed');assert.equal(calls,0);assert.equal(JSON.parse(await readFile(join(directory,'jobs',id,'job.json'),'utf8')).state,'failed');
+ }finally{await instance.close();}
+});

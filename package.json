@@ -15,7 +15,8 @@
     "test": "tsx --test tests/*.test.ts",
     "check": "tsc --noEmit",
     "codex:bridge": "tsx scripts/codex-bridge.ts",
-    "skill:install": "node scripts/install-humanoid-skill.mjs"
+    "skill:install": "node scripts/install-humanoid-skill.mjs",
+    "codex:service": "node scripts/codex-service.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

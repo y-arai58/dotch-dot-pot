@@ -49,10 +49,14 @@ Sites経由のビルド・配信はSitesスキルの手順に従います。実�
 npm run skill:install
 npm run skill:install -- animal
 codex login
-npm run codex:bridge
+npm run codex:service -- install
 ```
 
 `skill:install` は `skills/dotforge-humanoid` をユーザーのCodex skillsディレクトリへ登録します。更新する場合は差分を確認して `npm run skill:install -- --update` を実行します。動物用は `npm run skill:install -- animal --update` で更新できます。アプリ連携ではcheckout内の選択したskillを明示指定します。
+
+macOSでは `codex:service -- install` がユーザーのLaunchAgentとして連携サービスを登録し、その場で起動します。macOSへの次回ログイン時も自動起動し、サービスが終了した場合は再起動します。作業ターミナルやCodexの会話セッションを開き続ける必要はありません。登録したcheckoutとNode.jsの実体パスを使うので、移動・削除やNode.jsの更新後は再登録してください。連携コードの更新後も同じinstallコマンドで再起動します。状態確認は `npm run codex:service -- status`、解除は `npm run codex:service -- uninstall`。作成中の依頼があるときは更新・解除を止めます。ログは `~/.dotforge/logs` に保存します。
+
+macOS以外や一時的な開発では `npm run codex:bridge` を手動で起動します。この場合はそのターミナルを開いておく必要があります。
 
 bridgeはこの端末の127.0.0.1:43117で動作します。macOSではインストール済みChatGPT/Codexアプリ同梱バイナリを優先し、それ以外はPATH上の `codex` を使用します。`DOTFORGE_CODEX_BIN` で上書きできます。0.154.0-alpha.6.2で実生成を検証しました。古いCLIでは現在のモデルが使えない場合があります。グローバルCLI設定や認証ファイルをコピー・変更しません。
 
