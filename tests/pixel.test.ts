@@ -5,7 +5,7 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {DEFAULT_STYLE,buildMesh,renderSet,renderFrame,rgba,validateFrames,floodFill,drawLine,clone,type Mesh,type Model,type Revision,type V3} from '../lib/pixel';
 import {png,exportRevision,zip,crc32} from '../lib/export';
 import samples from '../lib/samples.json';
-import {assetSchema,styleSchema,generationSchema} from '../lib/contracts';
+import {assetSchema,styleSchema} from '../lib/contracts';
 import {RENDERER_VERSION,canReuseFrames} from '../lib/pixel';
 function decode(bytes:Uint8Array){const data=Buffer.from(bytes);assert.equal(data.subarray(1,4).toString(),'PNG');let offset=8,w=0,h=0;const parts:Buffer[]=[];while(offset<data.length){const n=data.readUInt32BE(offset),kind=data.subarray(offset+4,offset+8).toString(),body=data.subarray(offset+8,offset+8+n);assert.equal(crc32(data.subarray(offset+4,offset+8+n)),data.readUInt32BE(offset+8+n));if(kind==='IHDR'){w=body.readUInt32BE(0);h=body.readUInt32BE(4);}if(kind==='IDAT')parts.push(body);offset+=12+n;}const rows=inflateSync(Buffer.concat(parts)),pixels=Buffer.alloc(w*h*4);for(let y=0;y<h;y++){assert.equal(rows[y*(w*4+1)],0);rows.copy(pixels,y*w*4,y*(w*4+1)+1,(y+1)*(w*4+1));}return {w,h,pixels};}
 const style=clone(DEFAULT_STYLE),model=samples[0] as Model,mesh=buildMesh(model),frames=renderSet(mesh,style);
@@ -16,7 +16,7 @@ test('PNGを実際に展開し、8方向と512×64シートが画素単位で一
 test('光源だけを変えても物体シルエットは不変、明暗は変化する',()=>{const other=renderSet(mesh,{...style,light:135});for(let i=0;i<8;i++)assert.deepEqual(frames[i].body.map(Boolean),other[i].body.map(Boolean));assert.notDeepEqual(frames[0].body,other[0].body);});
 test('一方向の再描画で他方向の画素は変わらない',()=>{const before=clone(frames),after=frames.map(f=>f.direction==='E'?renderFrame(mesh,style,'E'):f);for(let i=0;i<8;i++)assert.deepEqual(after[i],before[i]);});
 test('鉛筆は1ピクセルだけ変え、塗りつぶしは境界を越えない',()=>{const p=new Array(4096).fill(0),line=drawLine(p,[31,31],[31,31],2);assert.equal(line.filter(Boolean).length,1);for(let y=0;y<64;y++)p[y*64+32]=1;const filled=floodFill(p,0,3);assert.equal(filled[0],3);assert.equal(filled[32],1);assert.equal(filled[63],0);assert.equal(p[0],0);});
-test('不正な画素・パレット・課金承認は拒否される',()=>{assert.equal(assetSchema.safeParse({id:'asset',projectId:'project',name:'test',revisions:[revision],version:0,updatedAt:''}).success,true);assert.equal(styleSchema.safeParse({...style,palette:['#oops']}).success,false);assert.equal(generationSchema.safeParse({authorize:false}).success,false);const wrong=clone(frames);wrong[0].body[0]=999;assert.ok(validateFrames(wrong,style,'eight').length);});
+test('不正な画素・パレットは拒否される',()=>{assert.equal(assetSchema.safeParse({id:'asset',projectId:'project',name:'test',revisions:[revision],version:0,updatedAt:''}).success,true);assert.equal(styleSchema.safeParse({...style,palette:['#oops']}).success,false);const wrong=clone(frames);wrong[0].body[0]=999;assert.ok(validateFrames(wrong,style,'eight').length);});
 test('正面のみは64×64のシート、枠外の影を検出する',()=>{const front={...revision,mode:'front' as const,frames:renderSet(mesh,style,'front')};const file=decode(exportRevision(front)['spritesheet.png']);assert.equal(file.w,64);assert.equal(file.h,64);const shadow=renderSet(mesh,{...style,shadow:true,lightHeight:20});assert.ok(shadow.some(f=>f.clipped));});
 mkdirSync('/private/tmp/dotforge-verification',{recursive:true});
 for(const m of samples){const r={...revision,frames:renderSet(buildMesh(m as Model),style)};writeFileSync(`/private/tmp/dotforge-verification/${m.id}.png`,exportRevision(r)['spritesheet.png']);}

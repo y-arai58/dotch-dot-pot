@@ -1,2 +1,1 @@
-# Set only in the server environment. Never use a NEXT_PUBLIC_ prefix.
-TRIPO_API_KEY=
+# No external generation API key is required. Generation uses the local Codex app server.

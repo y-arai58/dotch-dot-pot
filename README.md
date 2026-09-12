@@ -5,7 +5,7 @@
 ## 機能
 
 - プロジェクト単位のパレット、世界固定の光源、俯角、輪郭、落ち影設定
-- 4種類の共通3Dサンプル、GLB取込み、Tripo v2を使う生成API
+- 4種類の共通3Dサンプル、GLB取込み、Codex app serverによる人型skill生成
 - 8方向の比較、方向別の再描画、鉛筆・消しゴム・塗りつぶし・スポイト・矩形の画素編集
 - 候補と採用版の管理、採用版の上書き防止、保存時の競合検出
 - 64×64 PNG、512×64の8方向シート、メタデータをZIP出力
@@ -33,7 +33,7 @@ npm run build
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_nice_rogue.sql
 ```
 
-HTTP統合検証はローカルサーバー起動中・Tripoキー未設定の環境を対象にします。`TEST_ORIGIN` でURLを指定できます。検証専用のプロジェクトとアセットを作り、識別子を一時ファイルへ記録します。
+HTTP統合検証はローカルサーバー起動中の環境を対象にします。`TEST_ORIGIN` でURLを指定できます。検証専用のプロジェクトとアセットを作り、識別子を一時ファイルへ記録します。
 
 ```sh
 TEST_ORIGIN=http://localhost:5174 npx tsx tests/integration.ts
@@ -41,13 +41,37 @@ TEST_ORIGIN=http://localhost:5174 npx tsx tests/integration.ts
 
 Sites経由のビルド・配信はSitesスキルの手順に従います。実行プロファイルはportableです。`.sites-runtime/`、`.wrangler/`、秘密情報は追跡しません。
 
-## AI生成の接続
+## Codex app serverと人型skill
 
-サーバーの環境変数 `TRIPO_API_KEY` にキーを設定します。ブラウザへキーを渡しません。ローカルは `.dev.vars.example` を `.dev.vars` へコピーして設定し、サーバーを再起動します。Sitesでは実行環境のシークレットとして設定します。
+アプリの「Codexに接続」から「人型キャラクターを依頼」を使います。Codexのログインと利用枠を使用します。従来の外部3D生成API・接続キー・credits見積・課金同意UIは削除しました。HTTPのアプリ保存経路は維持します。
 
-Tripo v2の `P1-20260311` を使用します。画像ありの場合は画像を形状生成へ送り、文章と重要特徴は確認基準として保存します。最大3枚の参照をfront/left/back/rightへ対応づけ、複数画像では正面を必須にします。
+```sh
+npm run skill:install
+codex login
+npm run codex:bridge
+```
 
-送信前に外部送信・背面補完・見積creditsへの同意を求めます。有料タスクの自動再送は行いません。送信結果が不明な場合は再送を止め、提供元の履歴を確認する必要があります。監視の停止は提供元タスクの取消ではありません。
+`skill:install` は `skills/dotforge-humanoid` をユーザーのCodex skillsディレクトリへ登録します。更新する場合は差分を確認して `npm run skill:install -- --update` を実行します。アプリ連携ではcheckout内の同じskillを明示指定します。
+
+bridgeはこの端末の127.0.0.1:43117で動作します。macOSではインストール済みChatGPT/Codexアプリ同梱バイナリを優先し、それ以外はPATH上の `codex` を使用します。`DOTFORGE_CODEX_BIN` で上書きできます。0.154.0-alpha.6.2で実生成を検証しました。古いCLIでは現在のモデルが使えない場合があります。グローバルCLI設定や認証ファイルをコピー・変更しません。
+
+公開Siteのブラウザ → loopback bridge → `codex app-server --listen stdio://` の順で処理します。Workerは依頼と成果を利用者別に保存します。初回にブラウザのローカルネットワーク接続許可が必要な場合があります。loopback HTTPを拒否する環境では対応ブラウザまたはローカル版を使用してください。
+
+既定の許可OriginはこのSiteとlocalhost:5173/5174です。別URLでは `DOTFORGE_ALLOWED_ORIGINS` に正確なOriginをカンマ区切りで指定します。外部インターフェースでは待ち受けません。Host・Origin・接続tokenを検証し、任意RPCメソッド・コマンド・cwd・skill pathは入力として受け付けません。Codex認証情報はブラウザへ渡しません。接続tokenはタブのsessionStorageだけに保持します。
+
+app-serverはread-only / approval never、shell・Web・Apps・plugins・browser・画像生成・subagents・hooksを無効化し、設定済みMCPを個別に停止します。利用者のCodexプロファイルとログインを使うローカルアプリであり、別OSユーザー向けの隔離基盤ではありません。CLI互換性のため子プロセスに限りreasoning effortをhighへ設定します。
+
+明示skill入力 → 16関節モデルJSON → 344枚の技術検証 → 実際のPNGをCodexへ返す画像レビュー → 必要なら最大2回修正 → 候補受取、の順です。静止8方向と、待機8・歩行12・しゃがみ10・ジャンプ12コマの全8方向を検査します。採用は利用者が行います。
+
+受取側のWorkerでも同じモデル・保存済みスタイルから全動作を再描画し、ブラウザ申告の合格レポートだけでは受理しません。画像レビュー記述自体は暗号学的な証明ではなく、最終的な見た目の採用判断は利用者に残します。
+
+説明・重要特徴・参照画像（最大3枚、各方向を指定）を同時に渡します。結果は立体形状、全パーツの追従先、16関節、動作補正を持つJSONです。候補追加後は8方向の再描画、パレット・光源変更、アニメーション編集、PNG/JSON出力を使えます。
+
+画面を閉じてもbridgeが動いていれば作成は続きます。再接続後は同じ依頼IDで結果を復元し、重複実行しません。停止はturn/interruptへ伝え、遅れて届いた成果は採用しません。bridge再起動時の未完了依頼は失敗とし、自動再送しません。作業データは `~/.dotforge/jobs` に残します。任意の保存先は `DOTFORGE_HOME` で設定できます。
+
+単独のskill検証は `node skills/dotforge-humanoid/scripts/check.mjs --studio . --model path/to/model.json --out path/to/review` で実行します。実生成を伴う確認は通常テストに含めず、明示的に `DOTFORGE_LIVE_TEST=1 node --import tsx scripts/smoke-codex.ts` を実行した場合だけCodexの利用枠を使います。
+
+将来の動物skillは `CREATION_SKILLS` に登録し、専用の入出力schema・骨格・検証器・runnerを実装します。未登録skillは両側で拒否します。
 
 ## 実装・検証の状況
 
@@ -58,14 +82,11 @@ Tripo v2の `P1-20260311` を使用します。画像ありの場合は画像を
 - 描画方式が古い版では部分再描画を停止し、全方向を新候補として更新。旧採用版は維持します。
 - WebMCPは対応環境向けに検査・方向選択を登録。利用中の操作環境に呼出手段がなく、実行検証は未実施。
 
-キー未設定のため、実際のTripo生成・課金・生成GLBの取得と表示は未検証です。20アセットの品質比較、原価・待ち時間の実測、画像参照の忠実度、データ保持・削除・復旧運用は提供前の検証事項です。共有3D形状は方向間の形状を揃えますが、入力に対する正しさや手修正後の一貫性を自動保証しません。
+人型skillで「港町の修理技師」を実生成し、64パーツ・344枚の技術検証と画像レビューに合格しました。20アセットの品質比較、参照画像への忠実度、ブラウザ別のローカル接続、長期運用は追加検証事項です。共有3D形状は方向間の形状を揃えますが、入力に対する正しさや手修正後の一貫性を自動保証しません。
 
 ## 参照
 
-- [Tripo P1テキスト生成](https://docs.tripo3d.ai/model-generation/text-to-model-p1-20260311.html)
-- [Tripo P1画像生成](https://docs.tripo3d.ai/model-generation/image-to-model-p1-20260311.html)
-- [Tripo P1複数画像生成](https://docs.tripo3d.ai/model-generation/multiview-to-model-p1-20260311.html)
-- [Tripo料金](https://docs.tripo3d.ai/get-started/pricing.html)
+- [Codex app server](https://learn.chatgpt.com/docs/app-server)
 - [PNG仕様](https://www.w3.org/TR/png-3/)
 
 詳細な要件と受入基準は、プロジェクト直下の `specification.md` を参照してください。
@@ -86,7 +107,7 @@ ZIPは動作ごとに`walk/S/000.png`等の個別画像、`walk/spritesheet.png`
 
 骨格付きGLBは認識できる人型関節名とスキンウェイトを保持します。未知の関節名・T/Aポーズ・非人型・複雑な衣装は支点や回転補正の調整が必要です。「人型の部位を推定する」は近接する骨から重みを推定する補助機能です。実形状の正しい分割や自動リグ品質を保証するものではなく、利用者が部位・左右・支点を確認するまで全動作の生成を開始しません。
 
-同梱の人型2種は部位を分割済みです。魔術師の裾は脚に追従するパネル近似で、杖は左前腕の共通キーで持ち上げます。布シミュレーションや形状同士の衝突解決は含みません。衣装・装備の交差と見た目は全方向を確認します。Tripoの有料リグAPIや有料動作プリセットは今回呼び出していません。
+同梱の人型2種は部位を分割済みです。魔術師の裾は脚に追従するパネル近似で、杖は左前腕の共通キーで持ち上げます。布シミュレーションや形状同士の衝突解決は含みません。衣装・装備の交差と見た目は全方向を確認します。基本動作はアプリ内で計算します。
 
 アニメーション保存のHTTP統合検証:
 

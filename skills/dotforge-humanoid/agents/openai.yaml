@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dotforge 人型キャラクター"
+  short_description: "64×64・8方向と基本動作を保つ、パーツ管理された人型キャラクターを作成"
+  default_prompt: "$dotforge-humanoid を使い、指定した特徴とプロジェクトの配色・光源を保つ人型キャラクターを作成してください。"
