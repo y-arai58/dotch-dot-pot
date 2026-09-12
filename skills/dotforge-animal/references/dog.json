@@ -1,0 +1,989 @@
+{
+  "id": "collared-beagle",
+  "name": "青い首輪の犬",
+  "prompt": "垂れ耳と丸い頭、短く幅広い鼻、茶色の背中模様と白い足、青い首輪と金の名札、短めに上げた白い尾の犬。",
+  "features": [
+    "大きな茶色の垂れ耳",
+    "額と鼻の白い模様",
+    "青い首輪と金色の名札",
+    "茶色の背中模様",
+    "細く上向きの白い尾先"
+  ],
+  "parts": [
+    {
+      "id": "dog-body",
+      "bone": "body",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        0.13,
+        0.83
+      ],
+      "size": [
+        0.68,
+        0.91,
+        0.57
+      ],
+      "color": "#ead7b4"
+    },
+    {
+      "id": "dog-saddle",
+      "bone": "body",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        0.13,
+        1.016
+      ],
+      "size": [
+        0.58,
+        0.64,
+        0.24
+      ],
+      "color": "#614437"
+    },
+    {
+      "id": "dog-chest",
+      "bone": "chest",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.31,
+        0.84
+      ],
+      "size": [
+        0.72,
+        0.56,
+        0.61
+      ],
+      "color": "#b98551"
+    },
+    {
+      "id": "dog-chest-white",
+      "bone": "chest",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.514,
+        0.78
+      ],
+      "size": [
+        0.43,
+        0.2,
+        0.46
+      ],
+      "color": "#ead7b4"
+    },
+    {
+      "id": "dog-neck",
+      "bone": "neck",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.53,
+        0.99
+      ],
+      "size": [
+        0.43,
+        0.4,
+        0.46
+      ],
+      "color": "#b98551"
+    },
+    {
+      "id": "dog-collar",
+      "bone": "neck",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.535,
+        0.965
+      ],
+      "size": [
+        0.47,
+        0.415,
+        0.13
+      ],
+      "color": "#477d85",
+      "rotation": [
+        0.22,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-tag",
+      "bone": "neck",
+      "shape": "box",
+      "position": [
+        0,
+        -0.749,
+        0.91
+      ],
+      "size": [
+        0.11,
+        0.045,
+        0.13
+      ],
+      "color": "#d7af60"
+    },
+    {
+      "id": "dog-head",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.68,
+        1.16
+      ],
+      "size": [
+        0.6,
+        0.5,
+        0.49
+      ],
+      "color": "#b98551"
+    },
+    {
+      "id": "dog-muzzle",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.916,
+        1.08
+      ],
+      "size": [
+        0.37,
+        0.28,
+        0.24
+      ],
+      "color": "#ead7b4"
+    },
+    {
+      "id": "dog-nose",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -1.041,
+        1.125
+      ],
+      "size": [
+        0.155,
+        0.08,
+        0.115
+      ],
+      "color": "#302c32"
+    },
+    {
+      "id": "dog-jaw",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.911,
+        0.996
+      ],
+      "size": [
+        0.3,
+        0.24,
+        0.105
+      ],
+      "color": "#ead7b4"
+    },
+    {
+      "id": "dog-forehead-blaze",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.904,
+        1.23
+      ],
+      "size": [
+        0.115,
+        0.07,
+        0.25
+      ],
+      "color": "#ead7b4"
+    },
+    {
+      "id": "dog-L-ear",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        0.305,
+        -0.66,
+        1.065
+      ],
+      "size": [
+        0.205,
+        0.33,
+        0.5
+      ],
+      "color": "#614437",
+      "rotation": [
+        0,
+        0.13,
+        0
+      ]
+    },
+    {
+      "id": "dog-L-eye",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        0.17,
+        -0.903,
+        1.255
+      ],
+      "size": [
+        0.078,
+        0.05,
+        0.078
+      ],
+      "color": "#302c32"
+    },
+    {
+      "id": "dog-L-brow",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        0.18,
+        -0.879,
+        1.31
+      ],
+      "size": [
+        0.13,
+        0.06,
+        0.075
+      ],
+      "color": "#b98551"
+    },
+    {
+      "id": "dog-L-haunch",
+      "bone": "hindUpperL",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.41,
+        0.71
+      ],
+      "size": [
+        0.3,
+        0.35,
+        0.4
+      ],
+      "color": "#b98551"
+    },
+    {
+      "id": "dog-R-ear",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        -0.305,
+        -0.66,
+        1.065
+      ],
+      "size": [
+        0.205,
+        0.33,
+        0.5
+      ],
+      "color": "#614437",
+      "rotation": [
+        0,
+        -0.13,
+        0
+      ]
+    },
+    {
+      "id": "dog-R-eye",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        -0.17,
+        -0.903,
+        1.255
+      ],
+      "size": [
+        0.078,
+        0.05,
+        0.078
+      ],
+      "color": "#302c32"
+    },
+    {
+      "id": "dog-R-brow",
+      "bone": "head",
+      "shape": "ellipsoid",
+      "position": [
+        -0.18,
+        -0.879,
+        1.31
+      ],
+      "size": [
+        0.13,
+        0.06,
+        0.075
+      ],
+      "color": "#b98551"
+    },
+    {
+      "id": "dog-R-haunch",
+      "bone": "hindUpperR",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.41,
+        0.71
+      ],
+      "size": [
+        0.3,
+        0.35,
+        0.4
+      ],
+      "color": "#b98551"
+    },
+    {
+      "id": "dog-tail-base",
+      "bone": "tailBase",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        0.7,
+        1.005
+      ],
+      "size": [
+        0.175,
+        0.35,
+        0.18
+      ],
+      "color": "#b98551",
+      "rotation": [
+        0.6,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-tail-tip",
+      "bone": "tailTip",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        0.91,
+        1.19
+      ],
+      "size": [
+        0.14,
+        0.21,
+        0.29
+      ],
+      "color": "#ead7b4",
+      "rotation": [
+        -0.45,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-front-L-upper",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        -0.3675,
+        0.605
+      ],
+      "size": [
+        0.21275,
+        0.205,
+        0.37
+      ],
+      "color": "#b98551",
+      "bone": "frontUpperL",
+      "rotation": [
+        0.13552771398550084,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-front-L-joint",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        -0.345,
+        0.44
+      ],
+      "size": [
+        0.18975,
+        0.185,
+        0.16
+      ],
+      "color": "#b98551",
+      "bone": "frontLowerL"
+    },
+    {
+      "id": "dog-front-L-lower",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        -0.37,
+        0.345
+      ],
+      "size": [
+        0.161,
+        0.15,
+        0.25
+      ],
+      "color": "#ead7b4",
+      "bone": "frontLowerL",
+      "rotation": [
+        -0.15037142800713466,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-front-L-ankle-fur",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        -0.395,
+        0.17
+      ],
+      "size": [
+        0.17825,
+        0.18,
+        0.15
+      ],
+      "color": "#ead7b4",
+      "bone": "frontPawL"
+    },
+    {
+      "id": "dog-front-L-paw",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        -0.44,
+        0.1
+      ],
+      "size": [
+        0.23574999999999996,
+        0.28,
+        0.2
+      ],
+      "color": "#ead7b4",
+      "bone": "frontPawL"
+    },
+    {
+      "id": "dog-front-L-toe",
+      "shape": "box",
+      "position": [
+        0.245,
+        -0.549,
+        0.075
+      ],
+      "size": [
+        0.15525,
+        0.043,
+        0.045
+      ],
+      "color": "#302c32",
+      "bone": "frontPawL"
+    },
+    {
+      "id": "dog-front-R-upper",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        -0.3675,
+        0.605
+      ],
+      "size": [
+        0.21275,
+        0.205,
+        0.37
+      ],
+      "color": "#b98551",
+      "bone": "frontUpperR",
+      "rotation": [
+        0.13552771398550084,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-front-R-joint",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        -0.345,
+        0.44
+      ],
+      "size": [
+        0.18975,
+        0.185,
+        0.16
+      ],
+      "color": "#b98551",
+      "bone": "frontLowerR"
+    },
+    {
+      "id": "dog-front-R-lower",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        -0.37,
+        0.345
+      ],
+      "size": [
+        0.161,
+        0.15,
+        0.25
+      ],
+      "color": "#ead7b4",
+      "bone": "frontLowerR",
+      "rotation": [
+        -0.15037142800713466,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-front-R-ankle-fur",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        -0.395,
+        0.17
+      ],
+      "size": [
+        0.17825,
+        0.18,
+        0.15
+      ],
+      "color": "#ead7b4",
+      "bone": "frontPawR"
+    },
+    {
+      "id": "dog-front-R-paw",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        -0.44,
+        0.1
+      ],
+      "size": [
+        0.23574999999999996,
+        0.28,
+        0.2
+      ],
+      "color": "#ead7b4",
+      "bone": "frontPawR"
+    },
+    {
+      "id": "dog-front-R-toe",
+      "shape": "box",
+      "position": [
+        -0.245,
+        -0.549,
+        0.075
+      ],
+      "size": [
+        0.15525,
+        0.043,
+        0.045
+      ],
+      "color": "#302c32",
+      "bone": "frontPawR"
+    },
+    {
+      "id": "dog-hind-L-upper",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.4125,
+        0.5975
+      ],
+      "size": [
+        0.21275,
+        0.205,
+        0.37
+      ],
+      "color": "#b98551",
+      "bone": "hindUpperL",
+      "rotation": [
+        -0.10727885564840267,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-hind-L-joint",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.395,
+        0.435
+      ],
+      "size": [
+        0.18975,
+        0.185,
+        0.16
+      ],
+      "color": "#b98551",
+      "bone": "hindLowerL"
+    },
+    {
+      "id": "dog-hind-L-lower",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.4225,
+        0.345
+      ],
+      "size": [
+        0.161,
+        0.15,
+        0.25
+      ],
+      "color": "#ead7b4",
+      "bone": "hindLowerL",
+      "rotation": [
+        0.16764243783121568,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-hind-L-ankle-fur",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.45,
+        0.17
+      ],
+      "size": [
+        0.17825,
+        0.18,
+        0.15
+      ],
+      "color": "#ead7b4",
+      "bone": "hindPawL"
+    },
+    {
+      "id": "dog-hind-L-paw",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.405,
+        0.1
+      ],
+      "size": [
+        0.23574999999999996,
+        0.28,
+        0.2
+      ],
+      "color": "#ead7b4",
+      "bone": "hindPawL"
+    },
+    {
+      "id": "dog-hind-L-toe",
+      "shape": "box",
+      "position": [
+        0.245,
+        0.29600000000000004,
+        0.075
+      ],
+      "size": [
+        0.15525,
+        0.043,
+        0.045
+      ],
+      "color": "#302c32",
+      "bone": "hindPawL"
+    },
+    {
+      "id": "dog-hind-R-upper",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.4125,
+        0.5975
+      ],
+      "size": [
+        0.21275,
+        0.205,
+        0.37
+      ],
+      "color": "#b98551",
+      "bone": "hindUpperR",
+      "rotation": [
+        -0.10727885564840267,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-hind-R-joint",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.395,
+        0.435
+      ],
+      "size": [
+        0.18975,
+        0.185,
+        0.16
+      ],
+      "color": "#b98551",
+      "bone": "hindLowerR"
+    },
+    {
+      "id": "dog-hind-R-lower",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.4225,
+        0.345
+      ],
+      "size": [
+        0.161,
+        0.15,
+        0.25
+      ],
+      "color": "#ead7b4",
+      "bone": "hindLowerR",
+      "rotation": [
+        0.16764243783121568,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dog-hind-R-ankle-fur",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.45,
+        0.17
+      ],
+      "size": [
+        0.17825,
+        0.18,
+        0.15
+      ],
+      "color": "#ead7b4",
+      "bone": "hindPawR"
+    },
+    {
+      "id": "dog-hind-R-paw",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.405,
+        0.1
+      ],
+      "size": [
+        0.23574999999999996,
+        0.28,
+        0.2
+      ],
+      "color": "#ead7b4",
+      "bone": "hindPawR"
+    },
+    {
+      "id": "dog-hind-R-toe",
+      "shape": "box",
+      "position": [
+        -0.245,
+        0.29600000000000004,
+        0.075
+      ],
+      "size": [
+        0.15525,
+        0.043,
+        0.045
+      ],
+      "color": "#302c32",
+      "bone": "hindPawR"
+    }
+  ],
+  "rig": {
+    "bones": [
+      {
+        "id": "root",
+        "pivot": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "body",
+        "parent": "root",
+        "pivot": [
+          0,
+          0.22,
+          0.82
+        ]
+      },
+      {
+        "id": "chest",
+        "parent": "body",
+        "pivot": [
+          0,
+          -0.29,
+          0.84
+        ]
+      },
+      {
+        "id": "neck",
+        "parent": "chest",
+        "pivot": [
+          0,
+          -0.48,
+          0.94
+        ]
+      },
+      {
+        "id": "head",
+        "parent": "neck",
+        "pivot": [
+          0,
+          -0.66,
+          1.13
+        ]
+      },
+      {
+        "id": "tailBase",
+        "parent": "body",
+        "pivot": [
+          0,
+          0.56,
+          0.91
+        ]
+      },
+      {
+        "id": "tailTip",
+        "parent": "tailBase",
+        "pivot": [
+          0,
+          0.81,
+          1.08
+        ]
+      },
+      {
+        "id": "frontUpperL",
+        "parent": "chest",
+        "pivot": [
+          0.245,
+          -0.39,
+          0.77
+        ]
+      },
+      {
+        "id": "frontLowerL",
+        "parent": "frontUpperL",
+        "pivot": [
+          0.245,
+          -0.345,
+          0.44
+        ]
+      },
+      {
+        "id": "frontPawL",
+        "parent": "frontLowerL",
+        "pivot": [
+          0.245,
+          -0.395,
+          0.11
+        ]
+      },
+      {
+        "id": "frontUpperR",
+        "parent": "chest",
+        "pivot": [
+          -0.245,
+          -0.39,
+          0.77
+        ]
+      },
+      {
+        "id": "frontLowerR",
+        "parent": "frontUpperR",
+        "pivot": [
+          -0.245,
+          -0.345,
+          0.44
+        ]
+      },
+      {
+        "id": "frontPawR",
+        "parent": "frontLowerR",
+        "pivot": [
+          -0.245,
+          -0.395,
+          0.11
+        ]
+      },
+      {
+        "id": "hindUpperL",
+        "parent": "body",
+        "pivot": [
+          0.245,
+          0.43,
+          0.76
+        ]
+      },
+      {
+        "id": "hindLowerL",
+        "parent": "hindUpperL",
+        "pivot": [
+          0.245,
+          0.395,
+          0.435
+        ]
+      },
+      {
+        "id": "hindPawL",
+        "parent": "hindLowerL",
+        "pivot": [
+          0.245,
+          0.45,
+          0.11
+        ]
+      },
+      {
+        "id": "hindUpperR",
+        "parent": "body",
+        "pivot": [
+          -0.245,
+          0.43,
+          0.76
+        ]
+      },
+      {
+        "id": "hindLowerR",
+        "parent": "hindUpperR",
+        "pivot": [
+          -0.245,
+          0.395,
+          0.435
+        ]
+      },
+      {
+        "id": "hindPawR",
+        "parent": "hindLowerR",
+        "pivot": [
+          -0.245,
+          0.45,
+          0.11
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dotforge 四足動物"
+  short_description: "犬・猫・キツネなどを、64×64の8方向と四足歩行に対応するパーツで作成"
+  default_prompt: "$dotforge-animal を使い、指定した動物の特徴とプロジェクトの配色・光源を保つ四足キャラクターを作成してください。"

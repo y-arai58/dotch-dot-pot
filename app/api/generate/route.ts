@@ -1,8 +1,10 @@
 import {bindings,owner,readJSON,fail,HttpError,projectOwned} from '@/lib/server';
-import {generationRequestSchema,parseHumanoid,staticModelIssues,motionModelIssues} from '@/lib/generation';
+import {CREATION_SKILLS,generationRequestSchema,parseHumanoid,staticModelIssues,motionModelIssues,animalMotionModelIssues} from '@/lib/generation';
 import {idSchema} from '@/lib/contracts';
 import {RENDERER_VERSION} from '@/lib/pixel';
 import {MOTION_VERSION,type RiggedModel} from '@/lib/animation';
+import {ANIMAL_MOTION_VERSION,type AnimalModel} from '@/lib/animal-animation';
+import {parseAnimal} from '@/lib/animal-contracts';
 export const dynamic='force-dynamic';
 type Job={id:string;owner:string;project_id:string;request:string;state:string;model_file:string|null;progress:number;error:string|null;created_at:string};
 const publicJob=(j:Job)=>({id:j.id,state:j.state,modelFile:j.model_file,progress:j.progress,error:j.error,request:JSON.parse(j.request),createdAt:j.created_at});
@@ -14,14 +16,14 @@ export async function POST(request:Request){try{
   if(input.action==='complete'){
    if(['ready','consumed'].includes(job.state))return Response.json(publicJob(job));
    if(!['queued','running'].includes(job.state))throw new HttpError(409,'この依頼は終了しています');
-   const req=generationRequestSchema.parse(JSON.parse(job.request));let model:RiggedModel;try{model=parseHumanoid(input.artifact?.model);}catch{throw new HttpError(400,'人型モデルの骨格・パーツを確認してください');}const issues=staticModelIssues(model,req.style),validation=input.artifact?.validation;
-   if(issues.length||input.artifact?.kind!=='rigged-humanoid-v1'||input.artifact.skillVersion!=='1.0.0'||!validation||validation.renderer!==RENDERER_VERSION||validation.motion!==MOTION_VERSION||validation.frames!==344||!Array.isArray(validation.issues)||validation.issues.length||typeof input.artifact.visualReview!=='string'||!input.artifact.visualReview.trim())throw new HttpError(400,'検証済みの人型モデルが必要です');
-   const motionIssues=await motionModelIssues(model,req.style);if(motionIssues.length)throw new HttpError(400,'基本動作の検証に失敗しました。'+motionIssues[0]);
-   const artifact={kind:'rigged-humanoid-v1',skillVersion:'1.0.0',model,validation:{renderer:RENDERER_VERSION,motion:MOTION_VERSION,frames:344,issues:[]},visualReview:input.artifact.visualReview.slice(0,3000)};
+   const req=generationRequestSchema.parse(JSON.parse(job.request)),entry=CREATION_SKILLS.find(s=>s.id===req.skillId)!,motionVersion=req.skillId==='animal'?ANIMAL_MOTION_VERSION:MOTION_VERSION;let model:RiggedModel|AnimalModel;try{model=req.skillId==='animal'?parseAnimal(input.artifact?.model):parseHumanoid(input.artifact?.model);}catch{throw new HttpError(400,'選択したskillの骨格・パーツを確認してください');}const issues=staticModelIssues(model,req.style),validation=input.artifact?.validation;
+   if(issues.length||input.artifact?.kind!==entry.artifactKind||input.artifact.skillVersion!=='1.0.0'||!validation||validation.renderer!==RENDERER_VERSION||validation.motion!==motionVersion||validation.frames!==entry.validationFrames||!Array.isArray(validation.issues)||validation.issues.length||typeof input.artifact.visualReview!=='string'||!input.artifact.visualReview.trim())throw new HttpError(400,'選択したskillで検証済みのモデルが必要です');
+   const motionIssues=req.skillId==='animal'?await animalMotionModelIssues(model as AnimalModel,req.style):await motionModelIssues(model as RiggedModel,req.style);if(motionIssues.length)throw new HttpError(400,'基本動作の検証に失敗しました。'+motionIssues[0]);
+   const artifact={kind:entry.artifactKind,skillVersion:entry.version,model,validation:{renderer:RENDERER_VERSION,motion:motionVersion,frames:entry.validationFrames,issues:[]},visualReview:input.artifact.visualReview.slice(0,3000)};
    const fileId=crypto.randomUUID(),key=`${user}/files/${fileId}`,bytes=JSON.stringify(artifact);
    await bucket.put(key,bytes,{httpMetadata:{contentType:'application/json'}});
    try{await db.batch([
-    db.prepare("INSERT INTO files (id,owner,name,kind,object_key,size,created_at) SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM jobs WHERE id=? AND owner=? AND state IN ('queued','running'))").bind(fileId,user,req.name+'.humanoid.json','application/json',key,new TextEncoder().encode(bytes).length,now,id,user),
+    db.prepare("INSERT INTO files (id,owner,name,kind,object_key,size,created_at) SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM jobs WHERE id=? AND owner=? AND state IN ('queued','running'))").bind(fileId,user,req.name+'.'+req.skillId+'.json','application/json',key,new TextEncoder().encode(bytes).length,now,id,user),
     db.prepare("UPDATE jobs SET state='ready',model_file=?,progress=100,error=NULL,updated_at=? WHERE id=? AND owner=? AND state IN ('queued','running')").bind(fileId,now,id,user)
    ]);const current=await db.prepare('SELECT * FROM jobs WHERE id=? AND owner=?').bind(id,user).first<Job>();if(current?.model_file!==fileId)await bucket.delete(key);return Response.json(publicJob(current!));}catch(e){await bucket.delete(key);throw e;}
   }

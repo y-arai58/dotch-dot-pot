@@ -4,16 +4,16 @@ import {mkdir,readFile,writeFile,rename,readdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
-import {generationRequestSchema,type GenerationRequest,type HumanoidArtifact} from '../lib/generation';
+import {generationRequestSchema,type GenerationRequest,type CreationArtifact} from '../lib/generation';
 import {connectedAccount} from './codex-rpc';
-import {generateHumanoid} from './codex-runner';
-type LocalJob={id:string;origin:string;digest:string;state:'running'|'ready'|'failed'|'cancelled';progress:number;error?:string;artifact?:HumanoidArtifact};
+import {generateCharacter} from './codex-runner';
+type LocalJob={id:string;origin:string;digest:string;state:'running'|'ready'|'failed'|'cancelled';progress:number;error?:string;artifact?:CreationArtifact};
 type Reference={side:string;data:string};
-type Runner=(request:GenerationRequest,references:Reference[],directory:string,signal:AbortSignal,progress:(n:number)=>void)=>Promise<HumanoidArtifact>;
+type Runner=(request:GenerationRequest,references:Reference[],directory:string,signal:AbortSignal,progress:(n:number)=>void)=>Promise<CreationArtifact>;
 const publicJob=({origin,digest,...job}:LocalJob)=>job;
 const publicError=(e:unknown)=>e instanceof Error&&/^(品質確認|生成を停止|この端末で codex login|Codexとの接続が切れ)/.test(e.message)?e.message.slice(0,1500):'Codexで作成を完了できませんでした。接続・ログイン・モデルの対応状況を確認してください';
 const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-export async function startBridge({port=43117,origins=['https://dotforge-studio.y-arai-dev222.chatgpt.site','http://localhost:5173','http://localhost:5174'],directory=join(homedir(),'.dotforge'),runner=generateHumanoid,status=connectedAccount}:{port?:number;origins?:string[];directory?:string;runner?:Runner;status?:typeof connectedAccount}={}){
+export async function startBridge({port=43117,origins=['https://dotforge-studio.y-arai-dev222.chatgpt.site','http://localhost:5173','http://localhost:5174'],directory=join(homedir(),'.dotforge'),runner=generateCharacter,status=connectedAccount}:{port?:number;origins?:string[];directory?:string;runner?:Runner;status?:typeof connectedAccount}={}){
  await mkdir(join(directory,'jobs'),{recursive:true,mode:0o700});
  const sessions=new Map<string,string>(),jobs=new Map<string,LocalJob>(),active=new Map<string,AbortController>();
  for(const id of await readdir(join(directory,'jobs'))){if(!/^[\w-]+$/.test(id))continue;try{const j=JSON.parse(await readFile(join(directory,'jobs',id,'job.json'),'utf8')) as LocalJob;if(j.state==='running'){j.state='failed';j.error='連携サービスが再起動しました。自動では再生成しません';}jobs.set(id,j);}catch{}}

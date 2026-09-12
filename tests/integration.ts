@@ -25,7 +25,7 @@ const approved={...saved.data,revisions:[{...r,approved:true,reviewed:true}]};co
 const changed=clone(adopted.data);changed.revisions[0].frames[0].body[32*64+32]=1;assert.equal((await request('/api/studio',{action:'asset',asset:changed})).status,400,'採用版の上書きを拒否');
 const generation={id:crypto.randomUUID(),projectId:id,skillId:'humanoid',name:'Skill検証',prompt:'港の修理技師',features:[],mode:'eight',style,referenceKeys:[],referenceSides:[]};
 assert.equal((await request('/api/generate',{...generation,style:{...style,id:'foreign-style'}})).status,400,'保存済みでないスタイルを拒否');
-assert.equal((await request('/api/generate',{...generation,skillId:'animal'})).status,400,'未登録skillを拒否');
+assert.equal((await request('/api/generate',{...generation,skillId:'bird'})).status,400,'未登録skillを拒否');
 const queued=await request('/api/generate',generation);assert.equal(queued.status,200,JSON.stringify(queued.data));assert.equal(queued.data.state,'queued');
 assert.equal((await request('/api/generate',generation)).status,200,'同じIDの再送は重複しない');
 assert.equal((await request('/api/generate',{...generation,prompt:'changed'})).status,409,'同じIDの別内容を拒否');

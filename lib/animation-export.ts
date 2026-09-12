@@ -1,10 +1,11 @@
 import {composite,rgba,DIRECTIONS} from './pixel';
 import {png,zip} from './export';
-import {unpackFrame,MOTION_VERSION,type AnimationDocument} from './animation';
+import {unpackFrame,type AnimationDocument} from './animation';
+import {ANIMAL_MOTION_VERSION,WALK_DUTY,type AnimalDocument} from './animal-animation';
 
-export function exportAnimation(document:AnimationDocument,layer:'body'|'shadow'|'composite'='composite'){
+export function exportAnimation(document:AnimationDocument|AnimalDocument,layer:'body'|'shadow'|'composite'='composite'){
  const files:Record<string,Uint8Array>={};
- const {config}=document;
+ const {config}=document;const distanceFactor=config.version===ANIMAL_MOTION_VERSION?1/WALK_DUTY:2;
  const directions=config.mode==='eight'?[...DIRECTIONS]:['S' as const];
  const clips=[];
  for(const clip of config.clips){
@@ -21,9 +22,9 @@ export function exportAnimation(document:AnimationDocument,layer:'body'|'shadow'
    cells.push({frame:f,direction:frame.direction,timeMs:f*1000/clip.fps,durationMs:1000/clip.fps,file:filename,rect:{x:f*64,y:d*64,width:64,height:64},pivot:config.style.anchor});
   }
   files[`${clip.id}/spritesheet.png`]=png(width,height,sheet);
-  clips.push({id:clip.id,name:clip.name,fps:clip.fps,frameCount:clip.frames,durationMs:clip.frames*1000/clip.fps,loop:clip.loop,layout:'columns=time, rows=direction',sheet:`${clip.id}/spritesheet.png`,sheetSize:{width,height},inPlace:true,rootMotion:{horizontal:'external',vertical:'baked-in-pixels'},cycleDistance:clip.id==='walk'?clip.stride*2*config.scale:0,recommendedSpeed:clip.id==='walk'?clip.stride*2*config.scale/(clip.frames/clip.fps):0,units:'normalized model units; multiply by project pixels-per-unit for screen distance',events:baked.events.map(e=>({...e,timeMs:e.frame*1000/clip.fps})),cells});
+  clips.push({id:clip.id,name:clip.name,fps:clip.fps,frameCount:clip.frames,durationMs:clip.frames*1000/clip.fps,loop:clip.loop,layout:'columns=time, rows=direction',sheet:`${clip.id}/spritesheet.png`,sheetSize:{width,height},inPlace:true,rootMotion:{horizontal:'external',vertical:'baked-in-pixels'},cycleDistance:clip.id==='walk'?clip.stride*distanceFactor*config.scale:0,recommendedSpeed:clip.id==='walk'?clip.stride*distanceFactor*config.scale/(clip.frames/clip.fps):0,units:'normalized model units; multiply by project pixels-per-unit for screen distance',events:baked.events.map(e=>({...e,timeMs:e.frame*1000/clip.fps})),cells});
  }
- files['animation.json']=new TextEncoder().encode(JSON.stringify({formatVersion:2,motionVersion:MOTION_VERSION,sourceRevisionId:document.sourceRevisionId,reviewed:document.reviewed,width:64,height:64,directions,layer,palette:config.style.palette,transparentIndex:0,camera:{projection:'orthographic',elevation:config.style.elevation},light:{azimuth:config.style.light,elevation:config.style.lightHeight,space:'world'},scale:config.scale,style:config.style,rig:config.rig,settings:config.clips,clips},null,2));
+ files['animation.json']=new TextEncoder().encode(JSON.stringify({formatVersion:2,motionVersion:config.version,sourceRevisionId:document.sourceRevisionId,reviewed:document.reviewed,width:64,height:64,directions,layer,palette:config.style.palette,transparentIndex:0,camera:{projection:'orthographic',elevation:config.style.elevation},light:{azimuth:config.style.light,elevation:config.style.lightHeight,space:'world'},scale:config.scale,style:config.style,rig:config.rig,settings:config.clips,clips},null,2));
  return files;
 }
-export const animationZip=(document:AnimationDocument,layer:'body'|'shadow'|'composite'='composite')=>zip(exportAnimation(document,layer));
+export const animationZip=(document:AnimationDocument|AnimalDocument,layer:'body'|'shadow'|'composite'='composite')=>zip(exportAnimation(document,layer));

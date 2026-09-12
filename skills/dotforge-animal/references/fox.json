@@ -1,0 +1,1032 @@
+{
+  "id": "copper-fox",
+  "name": "森のキツネ",
+  "prompt": "細い鼻先と尖った三角耳、白い頬と胸、黒褐色の四脚、大きな白い尾先を持つ細身の四足キツネ。",
+  "features": [
+    "尖った二つの耳",
+    "細い鼻先（−Y）",
+    "白い頬と胸",
+    "黒褐色の四脚",
+    "後方へ伸びる大きな尾と白い尾先（+Y）"
+  ],
+  "parts": [
+    {
+      "id": "fox-body",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        0.15,
+        0.83
+      ],
+      "size": [
+        0.6,
+        0.91,
+        0.5
+      ],
+      "color": "#b96532",
+      "bone": "body"
+    },
+    {
+      "id": "fox-chest",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.31,
+        0.85
+      ],
+      "size": [
+        0.64,
+        0.53,
+        0.57
+      ],
+      "color": "#cc7738",
+      "bone": "chest"
+    },
+    {
+      "id": "fox-neck",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.53,
+        0.985
+      ],
+      "size": [
+        0.4,
+        0.37,
+        0.48
+      ],
+      "color": "#cc7738",
+      "bone": "neck",
+      "rotation": [
+        0.25,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-head",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.68,
+        1.075
+      ],
+      "size": [
+        0.54,
+        0.46,
+        0.39
+      ],
+      "color": "#d17a3b",
+      "bone": "head"
+    },
+    {
+      "id": "fox-belly",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        0.08,
+        0.64
+      ],
+      "size": [
+        0.49,
+        0.75,
+        0.17
+      ],
+      "color": "#e5c9a0",
+      "bone": "body"
+    },
+    {
+      "id": "fox-white-chest",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.506,
+        0.825
+      ],
+      "size": [
+        0.43,
+        0.18,
+        0.44
+      ],
+      "color": "#ead3ae",
+      "bone": "chest"
+    },
+    {
+      "id": "fox-white-throat",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.686,
+        0.947
+      ],
+      "size": [
+        0.285,
+        0.15,
+        0.27
+      ],
+      "color": "#ead3ae",
+      "bone": "neck",
+      "rotation": [
+        0.25,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-muzzle",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.87,
+        1.0
+      ],
+      "size": [
+        0.31,
+        0.38,
+        0.22
+      ],
+      "color": "#e1a568",
+      "bone": "head"
+    },
+    {
+      "id": "fox-white-jaw",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.858,
+        0.945
+      ],
+      "size": [
+        0.26,
+        0.32,
+        0.13
+      ],
+      "color": "#edddbd",
+      "bone": "head"
+    },
+    {
+      "id": "fox-nose",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -1.041,
+        1.005
+      ],
+      "size": [
+        0.13,
+        0.095,
+        0.1
+      ],
+      "color": "#332c2b",
+      "bone": "head"
+    },
+    {
+      "id": "fox-nose-highlight",
+      "shape": "ellipsoid",
+      "position": [
+        -0.017,
+        -1.078,
+        1.025
+      ],
+      "size": [
+        0.043,
+        0.017,
+        0.026
+      ],
+      "color": "#797a79",
+      "bone": "head"
+    },
+    {
+      "id": "fox-L-cheek",
+      "shape": "ellipsoid",
+      "position": [
+        0.225,
+        -0.78,
+        1.0
+      ],
+      "size": [
+        0.17,
+        0.24,
+        0.2
+      ],
+      "color": "#edddbd",
+      "bone": "head"
+    },
+    {
+      "id": "fox-L-eye",
+      "shape": "ellipsoid",
+      "position": [
+        0.155,
+        -0.88,
+        1.135
+      ],
+      "size": [
+        0.07,
+        0.052,
+        0.075
+      ],
+      "color": "#302b2b",
+      "bone": "head"
+    },
+    {
+      "id": "fox-L-brow",
+      "shape": "ellipsoid",
+      "position": [
+        0.16,
+        -0.852,
+        1.19
+      ],
+      "size": [
+        0.115,
+        0.052,
+        0.055
+      ],
+      "color": "#ad542e",
+      "bone": "head"
+    },
+    {
+      "id": "fox-L-ear",
+      "shape": "cone",
+      "position": [
+        0.205,
+        -0.65,
+        1.31
+      ],
+      "size": [
+        0.215,
+        0.23,
+        0.31
+      ],
+      "color": "#ad542e",
+      "bone": "head"
+    },
+    {
+      "id": "fox-L-ear-inner",
+      "shape": "cone",
+      "position": [
+        0.205,
+        -0.736,
+        1.3
+      ],
+      "size": [
+        0.115,
+        0.058,
+        0.22
+      ],
+      "color": "#e5c9a0",
+      "bone": "head"
+    },
+    {
+      "id": "fox-L-haunch",
+      "shape": "ellipsoid",
+      "position": [
+        0.22,
+        0.405,
+        0.72
+      ],
+      "size": [
+        0.255,
+        0.35,
+        0.39
+      ],
+      "color": "#b96532",
+      "bone": "hindUpperL"
+    },
+    {
+      "id": "fox-R-cheek",
+      "shape": "ellipsoid",
+      "position": [
+        -0.225,
+        -0.78,
+        1.0
+      ],
+      "size": [
+        0.17,
+        0.24,
+        0.2
+      ],
+      "color": "#edddbd",
+      "bone": "head"
+    },
+    {
+      "id": "fox-R-eye",
+      "shape": "ellipsoid",
+      "position": [
+        -0.155,
+        -0.88,
+        1.135
+      ],
+      "size": [
+        0.07,
+        0.052,
+        0.075
+      ],
+      "color": "#302b2b",
+      "bone": "head"
+    },
+    {
+      "id": "fox-R-brow",
+      "shape": "ellipsoid",
+      "position": [
+        -0.16,
+        -0.852,
+        1.19
+      ],
+      "size": [
+        0.115,
+        0.052,
+        0.055
+      ],
+      "color": "#ad542e",
+      "bone": "head"
+    },
+    {
+      "id": "fox-R-ear",
+      "shape": "cone",
+      "position": [
+        -0.205,
+        -0.65,
+        1.31
+      ],
+      "size": [
+        0.215,
+        0.23,
+        0.31
+      ],
+      "color": "#ad542e",
+      "bone": "head"
+    },
+    {
+      "id": "fox-R-ear-inner",
+      "shape": "cone",
+      "position": [
+        -0.205,
+        -0.736,
+        1.3
+      ],
+      "size": [
+        0.115,
+        0.058,
+        0.22
+      ],
+      "color": "#e5c9a0",
+      "bone": "head"
+    },
+    {
+      "id": "fox-R-haunch",
+      "shape": "ellipsoid",
+      "position": [
+        -0.22,
+        0.405,
+        0.72
+      ],
+      "size": [
+        0.255,
+        0.35,
+        0.39
+      ],
+      "color": "#b96532",
+      "bone": "hindUpperR"
+    },
+    {
+      "id": "fox-tail-plume",
+      "shape": "ellipsoid",
+      "position": [
+        0.025,
+        0.76,
+        0.92
+      ],
+      "size": [
+        0.36,
+        0.5,
+        0.33
+      ],
+      "color": "#b96532",
+      "bone": "tailBase",
+      "rotation": [
+        0.4,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-tail-cream-tip",
+      "shape": "ellipsoid",
+      "position": [
+        0.055,
+        0.995,
+        1.01
+      ],
+      "size": [
+        0.29,
+        0.32,
+        0.25
+      ],
+      "color": "#ead3ae",
+      "bone": "tailTip",
+      "rotation": [
+        0.4,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-front-L-upper",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        -0.3675,
+        0.605
+      ],
+      "size": [
+        0.185,
+        0.205,
+        0.37
+      ],
+      "color": "#c47136",
+      "bone": "frontUpperL",
+      "rotation": [
+        0.13552771398550084,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-front-L-joint",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        -0.345,
+        0.44
+      ],
+      "size": [
+        0.165,
+        0.185,
+        0.16
+      ],
+      "color": "#c47136",
+      "bone": "frontLowerL"
+    },
+    {
+      "id": "fox-front-L-lower",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        -0.37,
+        0.345
+      ],
+      "size": [
+        0.14,
+        0.15,
+        0.25
+      ],
+      "color": "#51402f",
+      "bone": "frontLowerL",
+      "rotation": [
+        -0.15037142800713466,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-front-L-ankle-fur",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        -0.395,
+        0.17
+      ],
+      "size": [
+        0.155,
+        0.18,
+        0.15
+      ],
+      "color": "#49382d",
+      "bone": "frontPawL"
+    },
+    {
+      "id": "fox-front-L-paw",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        -0.44,
+        0.1
+      ],
+      "size": [
+        0.205,
+        0.28,
+        0.2
+      ],
+      "color": "#49382d",
+      "bone": "frontPawL"
+    },
+    {
+      "id": "fox-front-L-toe",
+      "shape": "box",
+      "position": [
+        0.245,
+        -0.549,
+        0.075
+      ],
+      "size": [
+        0.135,
+        0.043,
+        0.045
+      ],
+      "color": "#302b2b",
+      "bone": "frontPawL"
+    },
+    {
+      "id": "fox-front-R-upper",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        -0.3675,
+        0.605
+      ],
+      "size": [
+        0.185,
+        0.205,
+        0.37
+      ],
+      "color": "#c47136",
+      "bone": "frontUpperR",
+      "rotation": [
+        0.13552771398550084,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-front-R-joint",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        -0.345,
+        0.44
+      ],
+      "size": [
+        0.165,
+        0.185,
+        0.16
+      ],
+      "color": "#c47136",
+      "bone": "frontLowerR"
+    },
+    {
+      "id": "fox-front-R-lower",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        -0.37,
+        0.345
+      ],
+      "size": [
+        0.14,
+        0.15,
+        0.25
+      ],
+      "color": "#51402f",
+      "bone": "frontLowerR",
+      "rotation": [
+        -0.15037142800713466,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-front-R-ankle-fur",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        -0.395,
+        0.17
+      ],
+      "size": [
+        0.155,
+        0.18,
+        0.15
+      ],
+      "color": "#49382d",
+      "bone": "frontPawR"
+    },
+    {
+      "id": "fox-front-R-paw",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        -0.44,
+        0.1
+      ],
+      "size": [
+        0.205,
+        0.28,
+        0.2
+      ],
+      "color": "#49382d",
+      "bone": "frontPawR"
+    },
+    {
+      "id": "fox-front-R-toe",
+      "shape": "box",
+      "position": [
+        -0.245,
+        -0.549,
+        0.075
+      ],
+      "size": [
+        0.135,
+        0.043,
+        0.045
+      ],
+      "color": "#302b2b",
+      "bone": "frontPawR"
+    },
+    {
+      "id": "fox-hind-L-upper",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.4125,
+        0.5975
+      ],
+      "size": [
+        0.185,
+        0.205,
+        0.37
+      ],
+      "color": "#c47136",
+      "bone": "hindUpperL",
+      "rotation": [
+        -0.10727885564840267,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-hind-L-joint",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.395,
+        0.435
+      ],
+      "size": [
+        0.165,
+        0.185,
+        0.16
+      ],
+      "color": "#c47136",
+      "bone": "hindLowerL"
+    },
+    {
+      "id": "fox-hind-L-lower",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.4225,
+        0.345
+      ],
+      "size": [
+        0.14,
+        0.15,
+        0.25
+      ],
+      "color": "#51402f",
+      "bone": "hindLowerL",
+      "rotation": [
+        0.16764243783121568,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-hind-L-ankle-fur",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.45,
+        0.17
+      ],
+      "size": [
+        0.155,
+        0.18,
+        0.15
+      ],
+      "color": "#49382d",
+      "bone": "hindPawL"
+    },
+    {
+      "id": "fox-hind-L-paw",
+      "shape": "ellipsoid",
+      "position": [
+        0.245,
+        0.405,
+        0.1
+      ],
+      "size": [
+        0.205,
+        0.28,
+        0.2
+      ],
+      "color": "#49382d",
+      "bone": "hindPawL"
+    },
+    {
+      "id": "fox-hind-L-toe",
+      "shape": "box",
+      "position": [
+        0.245,
+        0.29600000000000004,
+        0.075
+      ],
+      "size": [
+        0.135,
+        0.043,
+        0.045
+      ],
+      "color": "#302b2b",
+      "bone": "hindPawL"
+    },
+    {
+      "id": "fox-hind-R-upper",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.4125,
+        0.5975
+      ],
+      "size": [
+        0.185,
+        0.205,
+        0.37
+      ],
+      "color": "#c47136",
+      "bone": "hindUpperR",
+      "rotation": [
+        -0.10727885564840267,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-hind-R-joint",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.395,
+        0.435
+      ],
+      "size": [
+        0.165,
+        0.185,
+        0.16
+      ],
+      "color": "#c47136",
+      "bone": "hindLowerR"
+    },
+    {
+      "id": "fox-hind-R-lower",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.4225,
+        0.345
+      ],
+      "size": [
+        0.14,
+        0.15,
+        0.25
+      ],
+      "color": "#51402f",
+      "bone": "hindLowerR",
+      "rotation": [
+        0.16764243783121568,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fox-hind-R-ankle-fur",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.45,
+        0.17
+      ],
+      "size": [
+        0.155,
+        0.18,
+        0.15
+      ],
+      "color": "#49382d",
+      "bone": "hindPawR"
+    },
+    {
+      "id": "fox-hind-R-paw",
+      "shape": "ellipsoid",
+      "position": [
+        -0.245,
+        0.405,
+        0.1
+      ],
+      "size": [
+        0.205,
+        0.28,
+        0.2
+      ],
+      "color": "#49382d",
+      "bone": "hindPawR"
+    },
+    {
+      "id": "fox-hind-R-toe",
+      "shape": "box",
+      "position": [
+        -0.245,
+        0.29600000000000004,
+        0.075
+      ],
+      "size": [
+        0.135,
+        0.043,
+        0.045
+      ],
+      "color": "#302b2b",
+      "bone": "hindPawR"
+    }
+  ],
+  "rig": {
+    "bones": [
+      {
+        "id": "root",
+        "pivot": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "body",
+        "parent": "root",
+        "pivot": [
+          0,
+          0.22,
+          0.82
+        ]
+      },
+      {
+        "id": "chest",
+        "parent": "body",
+        "pivot": [
+          0,
+          -0.29,
+          0.84
+        ]
+      },
+      {
+        "id": "neck",
+        "parent": "chest",
+        "pivot": [
+          0,
+          -0.48,
+          0.94
+        ]
+      },
+      {
+        "id": "head",
+        "parent": "neck",
+        "pivot": [
+          0,
+          -0.66,
+          1.045
+        ]
+      },
+      {
+        "id": "tailBase",
+        "parent": "body",
+        "pivot": [
+          0,
+          0.56,
+          0.91
+        ]
+      },
+      {
+        "id": "tailTip",
+        "parent": "tailBase",
+        "pivot": [
+          0.035,
+          0.93,
+          0.977
+        ]
+      },
+      {
+        "id": "frontUpperL",
+        "parent": "chest",
+        "pivot": [
+          0.245,
+          -0.39,
+          0.77
+        ]
+      },
+      {
+        "id": "frontLowerL",
+        "parent": "frontUpperL",
+        "pivot": [
+          0.245,
+          -0.345,
+          0.44
+        ]
+      },
+      {
+        "id": "frontPawL",
+        "parent": "frontLowerL",
+        "pivot": [
+          0.245,
+          -0.395,
+          0.11
+        ]
+      },
+      {
+        "id": "frontUpperR",
+        "parent": "chest",
+        "pivot": [
+          -0.245,
+          -0.39,
+          0.77
+        ]
+      },
+      {
+        "id": "frontLowerR",
+        "parent": "frontUpperR",
+        "pivot": [
+          -0.245,
+          -0.345,
+          0.44
+        ]
+      },
+      {
+        "id": "frontPawR",
+        "parent": "frontLowerR",
+        "pivot": [
+          -0.245,
+          -0.395,
+          0.11
+        ]
+      },
+      {
+        "id": "hindUpperL",
+        "parent": "body",
+        "pivot": [
+          0.245,
+          0.43,
+          0.76
+        ]
+      },
+      {
+        "id": "hindLowerL",
+        "parent": "hindUpperL",
+        "pivot": [
+          0.245,
+          0.395,
+          0.435
+        ]
+      },
+      {
+        "id": "hindPawL",
+        "parent": "hindLowerL",
+        "pivot": [
+          0.245,
+          0.45,
+          0.11
+        ]
+      },
+      {
+        "id": "hindUpperR",
+        "parent": "body",
+        "pivot": [
+          -0.245,
+          0.43,
+          0.76
+        ]
+      },
+      {
+        "id": "hindLowerR",
+        "parent": "hindUpperR",
+        "pivot": [
+          -0.245,
+          0.395,
+          0.435
+        ]
+      },
+      {
+        "id": "hindPawR",
+        "parent": "hindLowerR",
+        "pivot": [
+          -0.245,
+          0.45,
+          0.11
+        ]
+      }
+    ]
+  }
+}

@@ -13,7 +13,7 @@ import samples from '../lib/animation-samples.json';
 const request={id:'character-1',projectId:'project-1',skillId:'humanoid',name:'テスト',prompt:'港町の修理技師',features:['ゴーグル'],mode:'eight',style:DEFAULT_STYLE,referenceKeys:[],referenceSides:[]};
 test('人型専用の入力契約は別skill・任意実行入力・欠けた骨・重複パーツを拒否',()=>{
  assert.ok(generationRequestSchema.safeParse(request).success);
- assert.equal(generationRequestSchema.safeParse({...request,skillId:'animal'}).success,false);
+ assert.equal(generationRequestSchema.safeParse({...request,skillId:'bird'}).success,false);
  assert.equal(generationRequestSchema.safeParse({...request,command:'run arbitrary code'}).success,false);
  const model=clone(samples[0]);model.rig.bones.pop();assert.throws(()=>parseHumanoid(model));
  const dup=clone(samples[0]);dup.parts.push(dup.parts[0]);assert.throws(()=>parseHumanoid(dup),/重複/);

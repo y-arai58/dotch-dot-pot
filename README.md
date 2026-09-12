@@ -5,7 +5,7 @@
 ## 機能
 
 - プロジェクト単位のパレット、世界固定の光源、俯角、輪郭、落ち影設定
-- 4種類の共通3Dサンプル、GLB取込み、Codex app serverによる人型skill生成
+- 人型・小物4種と動物2種の共通3Dサンプル、GLB取込み、Codex app serverによる人型・四足動物skill生成
 - 8方向の比較、方向別の再描画、鉛筆・消しゴム・塗りつぶし・スポイト・矩形の画素編集
 - 候補と採用版の管理、採用版の上書き防止、保存時の競合検出
 - 64×64 PNG、512×64の8方向シート、メタデータをZIP出力
@@ -41,17 +41,18 @@ TEST_ORIGIN=http://localhost:5174 npx tsx tests/integration.ts
 
 Sites経由のビルド・配信はSitesスキルの手順に従います。実行プロファイルはportableです。`.sites-runtime/`、`.wrangler/`、秘密情報は追跡しません。
 
-## Codex app serverと人型skill
+## Codex app serverと制作skill
 
-アプリの「Codexに接続」から「人型キャラクターを依頼」を使います。Codexのログインと利用枠を使用します。従来の外部3D生成API・接続キー・credits見積・課金同意UIは削除しました。HTTPのアプリ保存経路は維持します。
+アプリの「Codexに接続」から作成skillを選んで依頼します。Codexのログインと利用枠を使用します。従来の外部3D生成API・接続キー・credits見積・課金同意UIは削除しました。HTTPのアプリ保存経路は維持します。
 
 ```sh
 npm run skill:install
+npm run skill:install -- animal
 codex login
 npm run codex:bridge
 ```
 
-`skill:install` は `skills/dotforge-humanoid` をユーザーのCodex skillsディレクトリへ登録します。更新する場合は差分を確認して `npm run skill:install -- --update` を実行します。アプリ連携ではcheckout内の同じskillを明示指定します。
+`skill:install` は `skills/dotforge-humanoid` をユーザーのCodex skillsディレクトリへ登録します。更新する場合は差分を確認して `npm run skill:install -- --update` を実行します。動物用は `npm run skill:install -- animal --update` で更新できます。アプリ連携ではcheckout内の選択したskillを明示指定します。
 
 bridgeはこの端末の127.0.0.1:43117で動作します。macOSではインストール済みChatGPT/Codexアプリ同梱バイナリを優先し、それ以外はPATH上の `codex` を使用します。`DOTFORGE_CODEX_BIN` で上書きできます。0.154.0-alpha.6.2で実生成を検証しました。古いCLIでは現在のモデルが使えない場合があります。グローバルCLI設定や認証ファイルをコピー・変更しません。
 
@@ -71,7 +72,7 @@ app-serverはread-only / approval never、shell・Web・Apps・plugins・browser
 
 単独のskill検証は `node skills/dotforge-humanoid/scripts/check.mjs --studio . --model path/to/model.json --out path/to/review` で実行します。実生成を伴う確認は通常テストに含めず、明示的に `DOTFORGE_LIVE_TEST=1 node --import tsx scripts/smoke-codex.ts` を実行した場合だけCodexの利用枠を使います。
 
-将来の動物skillは `CREATION_SKILLS` に登録し、専用の入出力schema・骨格・検証器・runnerを実装します。未登録skillは両側で拒否します。
+人型と動物は `CREATION_SKILLS` から専用の入出力schema・骨格・検証器へ振り分けます。未登録skillは両側で拒否します。
 
 ## 実装・検証の状況
 
@@ -116,3 +117,23 @@ TEST_ORIGIN=http://localhost:5173 npx tsx tests/animation-integration.ts
 ```
 
 先に`npm test`で検証用の全画素データを生成し、ローカルDBへ`drizzle/0001_cynical_wither.sql`を一度だけ適用してください。
+
+## 四足動物skillと動作編集
+
+`dotforge-animal` は犬・猫・キツネ・オオカミなど、四足哺乳類のためのskillです。鳥・魚・蛇・昆虫・人型には使いません。基準モデルは犬とキツネの2種です。形、耳、鼻、尾、毛の模様を種ごとに設計し、単なる色替えにしないことを品質基準に含めます。
+
+胴・胸・首・頭・尾2節と四つの脚を19関節で管理します。前脚と後脚の曲がる方向を分けた2節IKを使い、左後→左前→右後→右前の順で接地します。歩行は16コマ/12fps、各脚は周期の75%が接地で通常3脚支持です。待機8・伏せ/しゃがみ10・ジャンプ12コマと静止8方向を合わせて376枚を検証し、実際のPNGをCodexへ返して画像レビューします。
+
+動物素材のアニメーション編集室では、四つの足の接地、関節と部品の追従先、回転キー、尾の振れ幅を編集できます。歩幅は接地中の足の移動距離です。書き出す推奨移動速度は `stride / (0.75 × duration)`、前方は−Yです。書き出し形式は人型と共通で、motionVersionは `quadruped-ik-v1`、イベント名は各pawのcontact/liftです。人型素材は従来の16関節と344枚の検証を維持します。
+
+この骨格は後脚の飛節・指・蹄を独立に表さない簡略モデルです。全身の衝突解決、布/毛の物理、走行、飛行、遊泳は含みません。伏せは脚を曲げて胴を低くする基本動作で、腹を完全に地面へ置く姿勢にはモデルごとの補正が必要です。動物の骨格なしGLBへの自動リグは対象外です。
+
+```sh
+node skills/dotforge-animal/scripts/check.mjs --studio . --model skills/dotforge-animal/references/fox.json --out /private/tmp/dotforge-fox-review
+DOTFORGE_LIVE_TEST=1 DOTFORGE_SMOKE_SKILL=animal node --import tsx scripts/smoke-codex.ts
+TEST_ORIGIN=http://localhost:5173 npx tsx tests/animal-integration.ts
+```
+
+実生成のスモーク検証だけがCodexの利用枠を使用します。
+
+動物skillの実生成では「森の案内猫」を49パーツで作成し、376枚の技術検証と画像レビューを通過しました（2026-09-12）。青い首輪、左前足の白い模様、尾の縞を持つ新規モデルです。品種ごとの大規模な品質評価は今後の検証事項です。
