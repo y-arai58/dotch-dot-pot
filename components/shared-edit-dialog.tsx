@@ -80,7 +80,7 @@ export function SharedEditDialog({open,onClose,revision,direction,loadBaseMesh,o
  </section><section className="shared-edit-preview"><div className="panel-heading"><span>反映後の候補</span><small>各64 × 64 px</small></div><div className="shared-direction-grid">{result?.frames.map(f=>{const count=changes.find(c=>c.direction===f.direction)?.count||0;return <figure key={f.direction}><PixelCanvas pixels={composite(f)} palette={revision.style.palette} scale={3} label={`共通修正後 ${f.direction}`}/><figcaption>{f.direction}{f.direction===source?' · 修正元':''}<strong>{count?`${count}画素変更`:'変化なし'}</strong></figcaption></figure>;})}</div>
  {proposal&&proposal.transferred.length>0&&!changes.some(c=>c.direction!==source&&c.count>0)&&<p className="notice" role="status">他の方向では変化が見えていません。{method==='surface'?'部位の色を変える場合は「部位全体の色替え」を選んでください。':'変更する部位が小さいか、他の方向で隠れている可能性があります。'}</p>}
  {!!issues.length&&<div className="notice" role="status">候補の確認事項：{issues.slice(0,4).join(' / ')}</div>}
- <p className="help">元の版を残して新候補を保存します。新候補の「アニメーション」で「全動作・全方向を生成」すると、色替え・模様も動作へ引き継がれます。</p>
+ <p className="help">元の版は最後に保存した状態で残ります。未保存の描き込みは新候補だけに引き継ぎます。新候補の「アニメーション」で「全動作・全方向を生成」すると、色替え・模様も動作へ引き継がれます。</p>
  </section></div>}
  <footer className="shared-edit-footer"><button className="button" disabled={busy} onClick={onClose}>戻る</button><button className="button primary" disabled={busy||!result||(!proposal?.transferred.length&&!shapeChanged)} onClick={()=>void apply()}>{busy?<Loader2 size={16} className="spin"/>:<Check size={16}/>}全方向の新候補を保存</button></footer>
  </DialogContent></Dialog>;
