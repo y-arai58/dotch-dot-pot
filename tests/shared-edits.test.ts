@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {writeFile,mkdir} from 'node:fs/promises';
-import {applySharedEdits,captureSurfacePaint,emptySharedEdits,previewSharedRevision} from '../lib/shared-edits';
+import {applySharedEdits,capturePartColors,captureSurfacePaint,emptySharedEdits,previewSharedRevision} from '../lib/shared-edits';
 import {buildMesh,renderFrame,renderSet,clone,DEFAULT_STYLE,RENDERER_VERSION,rgba,type Revision,type Mesh,type SurfaceHit,type V3} from '../lib/pixel';
 import {sharedEditsSchema} from '../lib/shared-edits-schema';
 import {revisionSchema} from '../lib/contracts';
@@ -100,4 +100,75 @@ test('修正を重ねた版も、最も近い祖先の保存済み動作を選�
  assert.equal(findParentAnimation([unrelated,oldest],[first,second,third],third),oldest);
  assert.equal(findParentAnimation([oldest,closer],[first,second,third],third),closer);
  assert.equal(findParentAnimation([oldest],[{...second,parentRevisionId:third.id},third],third),undefined,'循環した参照では停止する');
+});
+test('部位色は変更画素を色別に集計し、最多色の最多shadeを選んで輪郭・削除・未所属の表面を除く',()=>{
+ const base=buildMesh({...box,parts:[{...box.parts[0],position:[-.6,0,1],size:[.7,.7,.7]},{...box.parts[0],id:'unassigned',position:[.6,0,1],size:[.7,.7,.7]}]});
+ for(const t of base.triangles)if(t.partId==='unassigned')delete t.partId;
+ const r=revision(base),hits:(SurfaceHit|undefined)[]=[];renderFrame(base,r.style,'S',1,0,hits);
+ const points=(shade:number)=>hits.flatMap((h,i)=>h&&base.triangles[h.triangle].partId==='body'&&h.shade===shade?[i]:[]);
+ const dark=points(.62),light=points(1.2);assert.ok(dark.length>=8&&light.length>=2);
+ const primary=[...dark.slice(0,3),...light.slice(0,2)],secondary=dark.slice(3,7),changed=[...primary,...secondary].sort((a,b)=>a-b);
+ for(const at of primary)r.frames[0].body[at]=20;for(const at of secondary)r.frames[0].body[at]=10;
+ const deleted=dark[7],outline=r.frames[0].body.findIndex((v,i)=>v===1&&!hits[i]),blank=r.frames[0].body.findIndex(v=>v===0),unassigned=hits.findIndex(h=>h&&!base.triangles[h.triangle].partId);
+ assert.ok(outline>=0&&blank>=0&&unassigned>=0);r.frames[0].body[deleted]=0;for(const at of [outline,blank,unassigned])r.frames[0].body[at]=20;
+ const captured=capturePartColors(base,r,'S');assert.equal(captured.proposals.length,1);
+ const proposal=captured.proposals[0];assert.equal(proposal.partId,'body');assert.equal(proposal.color,r.style.palette[19]);assert.equal(proposal.shade,.62);assert.equal(proposal.pixels,9);assert.equal(proposal.hasMultipleColors,true);
+ assert.deepEqual(proposal.colors,[{color:r.style.palette[19],shade:.62,pixels:5},{color:r.style.palette[9],shade:.62,pixels:4}]);
+ assert.deepEqual([...proposal.indices].sort((a,b)=>a-b),changed);assert.deepEqual([...captured.transferred].sort((a,b)=>a-b),changed);
+ assert.deepEqual([...captured.localOnly].sort((a,b)=>a-b),[deleted,outline,blank,unassigned].sort((a,b)=>a-b));
+});
+test('部位全体の色替えは裏面を含む全8方向へ反映し、保存済みの表面模様を上に残す',()=>{
+ const base=buildMesh(box),original=clone(base),r=revision(base),at=paintVisible(base,r)[0];
+ const oldEdits={...emptySharedEdits(base),paints:captureSurfacePaint(base,r,'S').paints},before=renderSet(applySharedEdits(base,oldEdits),r.style);
+ const edits={...oldEdits,partColors:{body:{color:r.style.palette[9],shade:1}}},mesh=applySharedEdits(base,edits),frames=renderSet(mesh,r.style);
+ assert.equal(frames[0].body[at],20,'既存の局所的な模様を維持する');
+ for(const [i,frame] of frames.entries())assert.notDeepEqual(frame.body,before[i].body,`${frame.direction}の部位色を変更する`);
+ assert.ok(mesh.triangles.some(t=>t.paint?.color===r.style.palette[9]));assert.ok(mesh.triangles.some(t=>t.paint?.color===r.style.palette[19]));
+ assert.equal(mesh.triangles.length,applySharedEdits(base,oldEdits).triangles.length,'部位色だけで表面を細分化しない');
+ assert.ok(JSON.stringify(edits).length<1000,'全8方向の色替えを少量の編集データで保存する');assert.deepEqual(base,original);
+});
+test('動物の頭部全体を色替えしても他の部位と形状を保ち、動作中も全方向で追従する',()=>{
+ const sample=parseAnimal(animalSamples[0]),base=buildMesh(sample),r=revision(base),part=sample.parts.find(p=>p.bone==='head')!.id;
+ const selected=paintVisible(base,r,3,part);for(const at of selected)r.frames[0].body[at]=32;
+ const captured=capturePartColors(base,r,'S'),proposal=captured.proposals.find(p=>p.partId===part)!;assert.ok(proposal);assert.equal(proposal.hasMultipleColors,false);
+ const edits={...emptySharedEdits(base),partColors:{[part]:{color:proposal.color,shade:proposal.shade}}},mesh=applySharedEdits(base,edits),rig=animalRig(sample),clip=animalClips()[1];
+ assert.equal(mesh.triangles.length,base.triangles.length);assert.deepEqual(mesh.parts,base.parts);
+ for(const frame of [0,Math.floor(clip.frames/2)]){
+  const pose=animalPose(rig,clip,frame),original=animalPoseMesh(base,rig,pose),painted=animalPoseMesh(mesh,rig,pose);
+  assert.deepEqual(painted.triangles.map(t=>t.vertices),original.triangles.map(t=>t.vertices),'色替え前後の関節追従が一致する');
+  for(const before of renderSet(original,r.style)){
+   const hits:(SurfaceHit|undefined)[]=[];renderFrame(original,r.style,before.direction,1,0,hits);const after=renderFrame(painted,r.style,before.direction);
+   const target=hits.flatMap((h,i)=>h&&original.triangles[h.triangle].partId===part?[i]:[]);assert.ok(target.length>0,`${before.direction}に頭部が見える`);
+   assert.ok(target.some(at=>after.body[at]!==before.body[at]),`${before.direction}の頭部が色替えされる`);
+   for(let at=0;at<4096;at++)if(!hits[at]||original.triangles[hits[at]!.triangle].partId!==part)assert.equal(after.body[at],before.body[at],'他部位・輪郭・背景を変更しない');
+  }
+ }
+});
+test('部位色の保存は旧形式と互換で、元モデル・部位・色・shade・容量の契約を守る',()=>{
+ const base=buildMesh(box),old=emptySharedEdits(base),edits={...old,partColors:{body:{color:'#668653',shade:1}}},r=revision(base);r.sharedEdits=edits;
+ assert.deepEqual(sharedEditsSchema.parse(old),old);assert.deepEqual(sharedEditsSchema.parse({version:1,paints:[],parts:{}}),{version:1,paints:[],parts:{}});
+ assert.deepEqual(revisionSchema.parse(JSON.parse(JSON.stringify(r))).sharedEdits,edits);
+ const parsed=sharedEditsSchema.parse(JSON.parse(JSON.stringify(edits)));assert.deepEqual(renderSet(applySharedEdits(base,parsed),r.style),renderSet(applySharedEdits(base,edits),r.style));
+ for(const shade of [.62,1,1.2])assert.equal(sharedEditsSchema.safeParse({...edits,partColors:{body:{color:'#Aa00Ff',shade}}}).success,true);
+ for(const color of ['red','#123','#12345678','#gg0000'])assert.equal(sharedEditsSchema.safeParse({...edits,partColors:{body:{color,shade:1}}}).success,false);
+ for(const shade of [0,.8,2])assert.equal(sharedEditsSchema.safeParse({...edits,partColors:{body:{color:'#668653',shade}}}).success,false);
+ assert.equal(sharedEditsSchema.safeParse({...edits,partColors:{body:{...edits.partColors.body,extra:true}}}).success,false);
+ assert.equal(sharedEditsSchema.safeParse({...edits,source:undefined}).success,false);assert.throws(()=>applySharedEdits(base,{...edits,source:undefined}),/元モデル/);
+ assert.throws(()=>applySharedEdits(base,{...edits,partColors:{missing:edits.partColors.body}}),/パーツ/);
+ const changed=buildMesh({...box,parts:[{...box.parts[0],size:[1.1,1,1]}]});assert.throws(()=>applySharedEdits(changed,edits),/構造が変わ/);
+ const partColors=Object.fromEntries(Array.from({length:200},(_,i)=>[`part-${i}`,edits.partColors.body]));assert.equal(sharedEditsSchema.safeParse({...old,partColors}).success,true);
+ assert.equal(sharedEditsSchema.safeParse({...old,partColors:{...partColors,overflow:edits.partColors.body}}).success,false);
+});
+test('部位全体の色替えはテクスチャの透明部分とUV・骨格・関節ウェイトを維持する',()=>{
+ const base=buildMesh(box);base.textures={coat:{width:2,height:1,data:new Uint8ClampedArray([255,255,255,0,255,255,255,255])}};base.skeleton=[{id:'root',pivot:[0,0,0]}];
+ for(const t of base.triangles){t.texture='coat';t.uv=[[0,0],[1,0],[0,1]];t.weights=[[{bone:'root',weight:1}],[{bone:'root',weight:1}],[{bone:'root',weight:1}]];}
+ const mesh=applySharedEdits(base,{...emptySharedEdits(base),partColors:{body:{color:'#64a0b5',shade:1}}});
+ assert.deepEqual(mesh.textures,base.textures);assert.deepEqual(mesh.skeleton,base.skeleton);assert.deepEqual(mesh.parts,base.parts);
+ assert.deepEqual(mesh.triangles.map(t=>[t.vertices,t.texture,t.uv,t.weights]),base.triangles.map(t=>[t.vertices,t.texture,t.uv,t.weights]));
+ const style={...DEFAULT_STYLE,outline:false},opaque=renderSet({...base,textures:undefined},style),before=renderSet(base,style),after=renderSet(mesh,style);
+ assert.ok(before.some((frame,i)=>frame.body.some((v,at)=>v===0&&opaque[i].body[at]!==0)),'元テクスチャに透明な穴がある');
+ for(const [i,frame] of after.entries()){
+  assert.notDeepEqual(frame.body,before[i].body);assert.deepEqual(frame.body.map(Boolean),before[i].body.map(Boolean),`${frame.direction}の透明な穴を埋めない`);
+  assert.deepEqual(rgba(frame.body,style.palette).filter((_,at)=>at%4===3),rgba(before[i].body,style.palette).filter((_,at)=>at%4===3));
+ }
 });

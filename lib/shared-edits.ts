@@ -1,6 +1,6 @@
 import {clone,projectToScreen,renderFrame,renderSet,type Mesh,type Triangle,type V3,type SurfaceHit,type Revision,type Frame,type Direction,type Influence} from './pixel';
-import {MAX_EDITED_TRIANGLES,MAX_SURFACE_PAINTS,type V2,type SharedEdits,type SurfacePaint,type PartTransform} from './shared-edit-types';
-export type {SharedEdits,PartTransform} from './shared-edit-types';
+import {MAX_EDITED_TRIANGLES,MAX_SURFACE_PAINTS,type V2,type SharedEdits,type SurfacePaint,type PartTransform,type PartColor} from './shared-edit-types';
+export type {SharedEdits,PartTransform,PartColor} from './shared-edit-types';
 
 const eps=1e-9;
 const mix=(a:number[],b:number[],t:number)=>a.map((v,i)=>v+(b[i]-v)*t);
@@ -66,20 +66,46 @@ export function partCenters(mesh:Mesh){
  return new Map([...bounds].map(([id,b])=>[id,b.min.map((v,i)=>(v+b.max[i])/2) as V3]));
 }
 export function applySharedEdits(base:Mesh,edits?:SharedEdits):Mesh{
- if(!edits||(!edits.paints.length&&!Object.keys(edits.parts).length))return base;
- if(edits.version!==1||edits.paints.length>MAX_SURFACE_PAINTS)throw Error('共通修正の上限を超えています');
+ if(!edits||(!edits.paints.length&&!Object.keys(edits.parts).length&&!Object.keys(edits.partColors||{}).length))return base;
+ if(edits.version!==1||edits.paints.length>MAX_SURFACE_PAINTS||Object.keys(edits.partColors||{}).length>200)throw Error('共通修正の上限を超えています');
  if(edits.source!==meshFingerprint(base))throw Error('元モデルの構造が変わっています。元のモデルを復元してから修正を読み込んでください');
  const centers=partCenters(base),byTriangle=new Map<number,SurfacePaint[]>();
  for(const id of Object.keys(edits.parts))if(!centers.has(id))throw Error('修正するパーツが元モデルにありません');
+ for(const [id,color] of Object.entries(edits.partColors||{})){
+  if(!centers.has(id))throw Error('色を変更するパーツが元モデルにありません');
+  if(!/^#[0-9a-fA-F]{6}$/.test(color.color)||![.62,1,1.2].includes(color.shade))throw Error('パーツの色が不正です');
+ }
  for(const p of edits.paints){if(!base.triangles[p.triangle])throw Error('修正する表面が元モデルにありません');const list=byTriangle.get(p.triangle)||[];list.push(p);byTriangle.set(p.triangle,list);}
  const triangles:Triangle[]=[];
  for(let i=0;i<base.triangles.length;i++){
   const original=base.triangles[i],transform=original.partId&&Object.hasOwn(edits.parts,original.partId)?edits.parts[original.partId]:undefined,center=original.partId?centers.get(original.partId):undefined;
-  const t:Triangle={...original,sourceIndex:i,sourceUV:[[0,0],[1,0],[0,1]],vertices:transform&&center?original.vertices.map(v=>v.map((n,a)=>center[a]+(n-center[a])*transform.scale[a]+transform.offset[a]) as V3) as [V3,V3,V3]:original.vertices};
+  const partColor=original.partId&&edits.partColors&&Object.hasOwn(edits.partColors,original.partId)?edits.partColors[original.partId]:undefined;
+  const t:Triangle={...original,...(partColor?{paint:partColor}:{}),sourceIndex:i,sourceUV:[[0,0],[1,0],[0,1]],vertices:transform&&center?original.vertices.map(v=>v.map((n,a)=>center[a]+(n-center[a])*transform.scale[a]+transform.offset[a]) as V3) as [V3,V3,V3]:original.vertices};
   let pieces=[t];for(const patch of byTriangle.get(i)||[]){pieces=pieces.flatMap(piece=>paintTriangle(piece,patch));if(pieces.length+triangles.length>MAX_EDITED_TRIANGLES)throw Error('表面の修正が細かすぎます。修正範囲を小さくしてください');}
   triangles.push(...pieces);if(triangles.length>MAX_EDITED_TRIANGLES)throw Error('修正後の面数が上限を超えています');
  }
  return {...base,triangles};
+}
+
+export type PartColorProposal=PartColor&{partId:string;pixels:number;hasMultipleColors:boolean;colors:(PartColor&{pixels:number})[];indices:number[]};
+/** Suggest one whole-part color from the painted pixels; separate markings remain an explicit surface-edit choice. */
+export function capturePartColors(mesh:Mesh,revision:Revision,direction:Direction):{proposals:PartColorProposal[];transferred:number[];localOnly:number[]}{
+ const hits:(SurfaceHit|undefined)[]=new Array(4096),before=renderFrame(mesh,revision.style,direction,revision.size,revision.facing,hits),edited=revision.frames.find(f=>f.direction===direction);
+ if(!edited)throw Error('修正した方向が見つかりません');
+ const groups=new Map<string,{indices:number[];colors:Map<string,{pixels:number;shades:Map<number,number>}>}>(),transferred:number[]=[],localOnly:number[]=[];
+ for(let at=0;at<4096;at++){
+  const index=edited.body[at];if(index===before.body[at])continue;
+  const hit=hits[at],partId=hit&&mesh.triangles[hit.triangle].partId,color=revision.style.palette[index-1];
+  if(!index||!hit||!partId||!color){localOnly.push(at);continue;}
+  let group=groups.get(partId);if(!group){group={indices:[],colors:new Map()};groups.set(partId,group);}
+  const normalized=color.toLowerCase();let choice=group.colors.get(normalized);if(!choice){choice={pixels:0,shades:new Map()};group.colors.set(normalized,choice);}
+  choice.pixels++;choice.shades.set(hit.shade,(choice.shades.get(hit.shade)||0)+1);group.indices.push(at);transferred.push(at);
+ }
+ const proposals=[...groups].map(([partId,group])=>{
+  const colors=[...group.colors].map(([color,choice])=>({color,pixels:choice.pixels,shade:[...choice.shades].sort((a,b)=>b[1]-a[1])[0][0]})).sort((a,b)=>b.pixels-a.pixels);
+  return {partId,color:colors[0].color,shade:colors[0].shade,pixels:group.indices.length,hasMultipleColors:colors.length>1,colors,indices:group.indices};
+ });
+ return {proposals,transferred,localOnly};
 }
 
 /** Trace only the nearest visible surface. A marking never tunnels through to the rear of an object. */

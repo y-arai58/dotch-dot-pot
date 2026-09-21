@@ -28,7 +28,7 @@ const savedMotion=await call('/api/animations',oldMotion);assert.equal(savedMoti
 const drawn=clone(original),hits:(SurfaceHit|undefined)[]=[];renderFrame(base,style,'S',1,0,hits);
 const headPart=model.parts.find(p=>p.bone==='head')!.id;
 const points=hits.flatMap((h,i)=>h&&base.triangles[h.triangle].partId===headPart?[i]:[]).slice(0,5);assert.ok(points.length);for(const at of points)drawn.frames[0].body[at]=20;
-const captured=captureSurfacePaint(base,drawn,'S'),edits={...emptySharedEdits(base),paints:captured.paints},preview=previewSharedRevision(base,drawn,'S',edits,captured.transferred);
+const captured=captureSurfacePaint(base,drawn,'S'),edits={...emptySharedEdits(base),paints:captured.paints,partColors:{[model.parts[0].id]:{color:style.palette[14],shade:1}}},preview=previewSharedRevision(base,drawn,'S',edits,captured.transferred);
 const edited:Revision={...clone(drawn),id:editedId,parentRevisionId:originalId,sharedEdits:edits,approved:false,reviewed:false,frames:preview.frames,baseFrames:preview.baseFrames};
 const saved=await call('/api/studio',{action:'asset',asset:{...initial.data,revisions:[original,edited]}});assert.equal(saved.status,200,JSON.stringify(saved.data));
 const loaded=await call('/api/studio?assetId='+assetId);assert.equal(loaded.status,200);const restored=loaded.data.revisions[1] as Revision;
