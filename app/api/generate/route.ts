@@ -6,13 +6,19 @@ import {MOTION_VERSION,type RiggedModel} from '@/lib/animation';
 import {ANIMAL_MOTION_VERSION,type AnimalModel} from '@/lib/animal-animation';
 import {parseAnimal} from '@/lib/animal-contracts';
 export const dynamic='force-dynamic';
-type Job={id:string;owner:string;project_id:string;request:string;state:string;model_file:string|null;progress:number;error:string|null;created_at:string};
-const publicJob=(j:Job)=>({id:j.id,state:j.state,modelFile:j.model_file,progress:j.progress,error:j.error,request:JSON.parse(j.request),createdAt:j.created_at});
+type Job={id:string;owner:string;project_id:string;request:string;state:string;model_file:string|null;progress:number;error:string|null;dismissed_at:string|null;created_at:string};
+const publicJob=(j:Job)=>({id:j.id,state:j.state,modelFile:j.model_file,progress:j.progress,error:j.error,dismissedAt:j.dismissed_at,request:JSON.parse(j.request),createdAt:j.created_at});
 export async function GET(request:Request){try{const user=await owner(),{db}=bindings(),id=idSchema.parse(new URL(request.url).searchParams.get('id'));const job=await db.prepare('SELECT * FROM jobs WHERE id=? AND owner=?').bind(id,user).first<Job>();if(!job)throw new HttpError(404,'依頼が見つかりません');return Response.json(publicJob(job),{headers:{'Cache-Control':'no-store'}});}catch(e){return fail(e);}}
 export async function POST(request:Request){try{
  const user=await owner(request),{db,bucket}=bindings(),input=await readJSON(request,500000),now=new Date().toISOString();
  if(input.action){
   const id=idSchema.parse(input.id),job=await db.prepare('SELECT * FROM jobs WHERE id=? AND owner=?').bind(id,user).first<Job>();if(!job)throw new HttpError(404,'依頼が見つかりません');
+  if(input.action==='dismiss'||input.action==='restore'){
+   if(!['failed','cancelled'].includes(job.state))throw new HttpError(409,'失敗・停止した依頼だけ履歴から削除できます');
+   const dismissedAt=input.action==='dismiss'?now:null;
+   await db.prepare("UPDATE jobs SET dismissed_at=? WHERE id=? AND owner=? AND state IN ('failed','cancelled')").bind(dismissedAt,id,user).run();
+   return Response.json(publicJob((await db.prepare('SELECT * FROM jobs WHERE id=? AND owner=?').bind(id,user).first<Job>())!));
+  }
   if(input.action==='complete'){
    if(['ready','consumed'].includes(job.state))return Response.json(publicJob(job));
    if(!['queued','running'].includes(job.state))throw new HttpError(409,'この依頼は終了しています');

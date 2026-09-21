@@ -1,0 +1,1 @@
+ALTER TABLE `jobs` ADD `dismissed_at` text;

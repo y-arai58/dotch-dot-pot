@@ -1,6 +1,14 @@
-# Dotforge — ドット絵制作室
+# Dotch Dot Pot — ドット絵制作室
 
 見下ろし型2Dゲーム向けの64×64ドット絵制作アプリ。共通の3D形状を正投影し、正面または8方向を同じ縮尺・材質・光源で描画します。64×64の画素バッファへ直接描きます。
+
+## ソースコードと稼働先
+
+- GitHub: https://github.com/y-arai58/dotch-dot-pot
+- 稼働先: https://dotforge-studio.y-arai-dev222.chatgpt.site/ （Sites、所有者のみ閲覧可能）
+- Sitesのソースリポジトリは配信用の別リポジトリです。GitHubへのpushだけでは稼働先へ反映されません。同じコミットをSites側にもpushし、ビルド・公開します。
+
+旧サービス名はDotforgeです。既存の生成依頼、ローカル連携、インストール済みskillとの互換性のため、`dotforge-*`のskill名、`DOTFORGE_*`設定、`.dotforge`の保存先、接続先URLは継続使用します。サービスの表示名はDotch Dot Potです。
 
 ## 機能
 
@@ -10,6 +18,9 @@
 - 候補と採用版の管理、採用版の上書き防止、保存時の競合検出
 - 64×64 PNG、512×64の8方向シート、メタデータをZIP出力
 - ChatGPTサインインと利用者別のD1/R2保存
+- 失敗・停止したCodex依頼を履歴から削除、直後の通知から元に戻す
+
+失敗履歴の表示状態はサーバーのD1に保存します。削除後は再読込しても一覧に表示されません。依頼IDの重複実行を防ぐため依頼記録は保持し、作成中の依頼や完成したアセット、端末側の連携ログは削除しません。
 
 サンプルはAI生成物ではありません。初期表示はデモです。デモの「変更を確定」は画面内だけの保持で、再読込すると初期状態へ戻ります。永続保存にはサインインしてプロジェクトへ素材を追加します。
 
@@ -31,6 +42,8 @@ npm test
 ```sh
 npm run build
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_nice_rogue.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_cynical_wither.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0002_material_exiles.sql
 ```
 
 HTTP統合検証はローカルサーバー起動中の環境を対象にします。`TEST_ORIGIN` でURLを指定できます。検証専用のプロジェクトとアセットを作り、識別子を一時ファイルへ記録します。
@@ -168,4 +181,10 @@ TEST_ORIGIN=http://localhost:5173 npx tsx tests/animal-integration.ts
 ```sh
 node --import tsx --test tests/shared-edits.test.ts
 TEST_ORIGIN=http://localhost:5173 node --import tsx tests/shared-edits-integration.ts
+```
+
+失敗・停止履歴の削除／復元は、ローカルDBに未適用のマイグレーションを適用後、開発サーバーを起動して検証します。
+
+```sh
+TEST_ORIGIN=http://localhost:5173 node --import tsx tests/job-history-integration.ts
 ```
