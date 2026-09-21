@@ -21,6 +21,7 @@ export function exportRevision(rev:Revision,layer:'body'|'shadow'|'composite'='c
  const files:Record<string,Uint8Array>={},width=rev.frames.length*64,sheet=new Uint8Array(width*64*4);
  rev.frames.forEach((f,i)=>{const pixels=rgba(composite(f,layer),rev.style.palette);files[`${f.direction}.png`]=png(64,64,pixels);for(let y=0;y<64;y++)sheet.set(pixels.subarray(y*256,(y+1)*256),(y*width+i*64)*4);});
  files['spritesheet.png']=png(width,64,sheet);
+ if(rev.sharedEdits)files['shared-edits.json']=utf8.encode(JSON.stringify({source:{kind:rev.source,modelId:rev.modelId,modelKey:rev.modelKey},edits:rev.sharedEdits},null,2));
  files['metadata.json']=utf8.encode(JSON.stringify({formatVersion:1,rendererVersion:rev.rendererVersion||'legacy',assetVersion:rev.id,styleVersion:rev.style.id,layer,width:64,height:64,palette:rev.style.palette,transparentIndex:0,camera:{projection:'orthographic',elevation:rev.style.elevation},light:{azimuth:rev.style.light,elevation:rev.style.lightHeight,space:'world'},frames:rev.frames.map((f,i)=>({direction:f.direction,angle:DIRECTIONS.indexOf(f.direction)*45,rect:{x:i*64,y:0,width:64,height:64},pivot:rev.style.anchor}))},null,2));return files;
 }
 export function download(data:Uint8Array,name:string,type='application/octet-stream'){const url=URL.createObjectURL(new Blob([data as BlobPart],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}

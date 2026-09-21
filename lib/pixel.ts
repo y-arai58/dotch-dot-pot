@@ -1,3 +1,4 @@
+import type {SharedEdits,V2} from './shared-edit-types';
 export const RENDERER_VERSION = 'orthographic-topdown-v2';
 export const DIRECTIONS = ['S','SE','E','NE','N','NW','W','SW'] as const;
 export type Direction = typeof DIRECTIONS[number];
@@ -5,12 +6,12 @@ export type V3 = [number,number,number];
 export type Part = { id:string; shape:'box'|'ellipsoid'|'cylinder'|'cone'; position:V3; size:V3; color:string; rotation?:V3 };
 export type Model = { id:string; name:string; prompt:string; features:string[]; parts:Part[] };
 export type Influence = {bone:string;weight:number};
-export type Triangle = { vertices:[V3,V3,V3]; color:string; uv?:[[number,number],[number,number],[number,number]]; texture?:string; partId?:string; weights?:[Influence[],Influence[],Influence[]] };
+export type Triangle = { vertices:[V3,V3,V3]; color:string; uv?:[[number,number],[number,number],[number,number]]; texture?:string; partId?:string; weights?:[Influence[],Influence[],Influence[]];sourceIndex?:number;sourceUV?:[V2,V2,V2];paint?:{color:string;shade:number} };
 export type Texture = {width:number;height:number;data:Uint8ClampedArray};
 export type Mesh = {triangles:Triangle[];textures?:Record<string,Texture>;parts?:{id:string;name:string}[];skeleton?:{id:string;parent?:string;pivot:V3}[]};
 export type Style = {id:string;name:string;palette:string[];light:number;lightHeight:number;elevation:number;outline:boolean;shadow:boolean;scale:number;anchor:[number,number]};
 export type Frame = {direction:Direction;body:number[];shadow:number[];clipped:boolean};
-export type Revision = {id:string;rendererVersion?:string;createdAt:string;style:Style;frames:Frame[];baseFrames:Frame[];approved:boolean;reviewed:boolean;issues:string;mode:'front'|'eight';source:'sample'|'tripo'|'import'|'skill';rigKind?:'humanoid'|'quadruped';modelId:string;features:string[];name:string;prompt:string;facing:number;size:number;modelKey?:string;referenceKeys?:string[]};
+export type Revision = {id:string;rendererVersion?:string;createdAt:string;style:Style;frames:Frame[];baseFrames:Frame[];approved:boolean;reviewed:boolean;issues:string;mode:'front'|'eight';source:'sample'|'tripo'|'import'|'skill';rigKind?:'humanoid'|'quadruped';modelId:string;features:string[];name:string;prompt:string;facing:number;size:number;modelKey?:string;referenceKeys?:string[];sharedEdits?:SharedEdits;parentRevisionId?:string};
 export type Asset = {id:string;projectId:string;name:string;revisions:Revision[];updatedAt:string;version:number};
 export type Project = {id:string;name:string;styles:Style[];updatedAt:string;version:number};
 export const PALETTE = ['#151b29','#29334b','#45516a','#718096','#aeb9c8','#e5ebec','#ffffff','#273d34','#3f6544','#668653','#91ad69','#c9d69a','#302a3f','#504369','#79658e','#ab8fbb','#4b3033','#85444c','#bd6860','#e89b78','#523d34','#805842','#ae7951','#d7a271','#f0cca0','#493e26','#806c37','#b7984b','#e5c469','#f6e3a3','#356075','#64a0b5'];
@@ -51,13 +52,18 @@ export function buildMesh(model:Model):Mesh{
  }
  return {triangles,parts:model.parts.map(p=>({id:p.id,name:p.id}))};
 }
-export function renderFrame(mesh:Mesh,style:Style,direction:Direction,size=1,facing=0):Frame{
+export type SurfaceHit={triangle:number;bary:V3;shade:number};
+export function projectToScreen(point:V3,style:Style,direction:Direction,size=1,facing=0):V3{
+ const v=rotate(point.map(n=>n*size) as V3,[0,0,radians(DIRECTIONS.indexOf(direction)*45+facing)]),el=radians(style.elevation);
+ return [style.anchor[0]+v[0]*style.scale,style.anchor[1]-(v[1]*Math.sin(el)+v[2]*Math.cos(el))*style.scale,-v[1]*Math.cos(el)+v[2]*Math.sin(el)];
+}
+export function renderFrame(mesh:Mesh,style:Style,direction:Direction,size=1,facing=0,hits?:(SurfaceHit|undefined)[]):Frame{
  const body=new Array<number>(4096).fill(0),shadow=new Array<number>(4096).fill(0),depth=new Float64Array(4096).fill(-Infinity);
  const yaw=radians(DIRECTIONS.indexOf(direction)*45+facing),el=radians(style.elevation),sin=Math.sin(el),cos=Math.cos(el);
  const a=radians(style.light),h=radians(style.lightHeight),light:V3=[Math.sin(a)*Math.cos(h),-Math.cos(a)*Math.cos(h),Math.sin(h)];
  const view:V3=[0,-cos,sin];let clipped=false;
  const project=(v:V3):V3=>[style.anchor[0]+v[0]*style.scale,style.anchor[1]-(v[1]*sin+v[2]*cos)*style.scale,-v[1]*cos+v[2]*sin];
- function raster(vertices:[V3,V3,V3],color:string,shade:number,shadowOnly=false,triangle?:Triangle){
+ function raster(vertices:[V3,V3,V3],color:string,shade:number,shadowOnly=false,triangle?:Triangle,triangleIndex?:number){
   const [p,q,r]=vertices.map(project),area=(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]);if(Math.abs(area)<.00001)return;
   const x0=Math.floor(Math.min(p[0],q[0],r[0])),x1=Math.ceil(Math.max(p[0],q[0],r[0]));
   const y0=Math.floor(Math.min(p[1],q[1],r[1])),y1=Math.ceil(Math.max(p[1],q[1],r[1]));
@@ -69,18 +75,19 @@ export function renderFrame(mesh:Mesh,style:Style,direction:Direction,size=1,fac
    if(aa<-.00001||b<-.00001||c<-.00001)continue;const at=y*64+x;
    if(shadowOnly){shadow[at]=1;continue;}
    const z=aa*p[2]+b*q[2]+c*r[2];if(z<depth[at])continue;
-   let base=rgb(color);const tex=triangle?.texture&&mesh.textures?.[triangle.texture];
-   if(tex&&triangle?.uv){const uv=triangle.uv;const u=aa*uv[0][0]+b*uv[1][0]+c*uv[2][0],v=aa*uv[0][1]+b*uv[1][1]+c*uv[2][1];const tx=Math.max(0,Math.min(tex.width-1,Math.floor(u*tex.width))),ty=Math.max(0,Math.min(tex.height-1,Math.floor(v*tex.height)));const ti=(ty*tex.width+tx)*4;if(tex.data[ti+3]<128)continue;base=[0,1,2].map(j=>tex.data[ti+j]*base[j]/255) as V3;}
-   const key=base.map(n=>Math.round(n*shade)).join(',');let index=cache.get(key);if(index===undefined){index=nearestColor(base.map(n=>Math.min(255,n*shade)) as V3,style.palette);cache.set(key,index);}
+   let base=rgb(triangle?.paint?.color||color);const tex=triangle?.texture&&mesh.textures?.[triangle.texture];
+   if(tex&&triangle?.uv){const uv=triangle.uv;const u=aa*uv[0][0]+b*uv[1][0]+c*uv[2][0],v=aa*uv[0][1]+b*uv[1][1]+c*uv[2][1];const tx=Math.max(0,Math.min(tex.width-1,Math.floor(u*tex.width))),ty=Math.max(0,Math.min(tex.height-1,Math.floor(v*tex.height)));const ti=(ty*tex.width+tx)*4;if(tex.data[ti+3]<128)continue;if(!triangle.paint)base=[0,1,2].map(j=>tex.data[ti+j]*base[j]/255) as V3;}
+   const shading=shade/(triangle?.paint?.shade||1),key=base.map(n=>Math.round(n*shading)).join(',');let index=cache.get(key);if(index===undefined){index=nearestColor(base.map(n=>Math.min(255,n*shading)) as V3,style.palette);cache.set(key,index);}
    body[at]=index;depth[at]=z;
+   if(hits&&triangleIndex!==undefined)hits[at]={triangle:triangleIndex,bary:[aa,b,c],shade};
   }
  }
- for(const t of mesh.triangles){
+ for(const [triangleIndex,t] of mesh.triangles.entries()){
   const v=t.vertices.map(p=>rotate(p.map(n=>n*size) as V3,[0,0,yaw])) as [V3,V3,V3];
   if(style.shadow){const sh=v.map(p=>[p[0]-p[2]*light[0]/light[2],p[1]-p[2]*light[1]/light[2],0] as V3) as [V3,V3,V3];raster(sh,style.palette[0],1,true);}
   let normal=norm(cross(sub(v[1],v[0]),sub(v[2],v[0])));if(dot(normal,view)<0)normal=normal.map(n=>-n) as V3;
   const illumination=dot(normal,light);const shade=illumination>.65?1.2:illumination>.05?1:.62;
-  raster(v,t.color,shade,false,t);
+  raster(v,t.color,shade,false,t,triangleIndex);
  }
  if(style.outline){const original=[...body];for(let y=0;y<64;y++)for(let x=0;x<64;x++){const at=y*64+x;if(original[at])continue;if((x>0&&original[at-1])||(x<63&&original[at+1])||(y>0&&original[at-64])||(y<63&&original[at+64])){body[at]=1;if(x<2||x>61||y<2||y>61)clipped=true;}}}
  return {direction,body,shadow,clipped};

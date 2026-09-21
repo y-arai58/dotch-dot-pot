@@ -7,9 +7,10 @@ import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from '@/compo
 import {Slider} from '@/components/ui/slider';
 import {Checkbox} from '@/components/ui/checkbox';
 import {PixelCanvas} from '@/components/pixel-canvas';
-import {buildMesh,clone,composite,DIRECTIONS,renderFrame,rotate,type Asset,type Revision,type Mesh,type Direction,type V3} from '@/lib/pixel';
+import {clone,composite,DIRECTIONS,renderFrame,rotate,type Asset,type Revision,type Mesh,type Direction,type V3} from '@/lib/pixel';
 import {MOTION_NAMES,unpackFrame,type MotionKind,type BakedClip} from '@/lib/animation';
 import {ANIMAL_BONES as BONE_IDS,ANIMAL_NAMES as BONE_NAMES,ANIMAL_PARENTS as PARENTS,ANIMAL_MOTION_VERSION as MOTION_VERSION,PAWS,animalClips as defaultClips,animalRig as rigFromModel,animalRigIssues as rigIssues,animalPose as evaluatePose,animalPoseMesh as poseMesh,animalKeys as sampleKeys,type AnimalDocument as AnimationDocument,type AnimalConfig as MotionConfig,type AnimalBone as BoneId,type AnimalModel as RiggedModel} from '@/lib/animal-animation';
+import {inheritAnimation,findParentAnimation} from '@/lib/animation-inheritance';
 import {animationZip} from '@/lib/animation-export';
 import {download} from '@/lib/export';
 import samples from '@/lib/animal-samples.json';
@@ -26,10 +27,11 @@ export function AnimalAnimationStudio({open,onClose,asset,revision,loadMesh}:{op
  const worker=useRef<Worker|null>(null),cache=useRef(new Map<string,AnimationDocument>()),demoHistory=useRef(new Map<string,AnimationDocument>()),loaded=useRef(''),liveDoc=useRef(doc);liveDoc.current=doc;
  const key=asset.id+':'+revision.id,isDemo=asset.projectId==='demo';
  useEffect(()=>{if(!open||loaded.current===key)return;let dead=false;setBusy(true);setError('');setPlaying(false);setDoc(null);setMesh(null);setSaved([]);setFrame(0);setDirection('S');
-  (async()=>{const model=revision.source==='skill'&&revision.modelKey?parseAnimal((await request<AnimalArtifact>('/api/files?id='+revision.modelKey)).model):(samples as RiggedModel[]).find(m=>revision.source==='sample'&&m.id===revision.modelId);if(!model)throw Error('四足動物モデルがありません');const initialMesh=buildMesh(model),rig=rigFromModel(model,revision.source==='skill'?'skill':'sample');
+  (async()=>{const model=revision.source==='skill'&&revision.modelKey?parseAnimal((await request<AnimalArtifact>('/api/files?id='+revision.modelKey)).model):(samples as RiggedModel[]).find(m=>revision.source==='sample'&&m.id===revision.modelId);if(!model)throw Error('四足動物モデルがありません');const initialMesh=await loadMesh(revision),rig=rigFromModel(model,revision.source==='skill'?'skill':'sample');
    const initial:AnimationDocument={id:crypto.randomUUID(),assetId:asset.id,sourceRevisionId:revision.id,name:asset.name.slice(0,93)+' の基本動作',config:{version:MOTION_VERSION,rig,clips:defaultClips(model?.motionCorrections),scale:revision.size,facing:revision.facing,style:clone(revision.style),mode:revision.mode},baked:[],version:0,updatedAt:'',reviewed:false};
    let next=cache.current.get(key)||initial,items:Saved[]=isDemo?[...demoHistory.current.values()].filter(d=>d.assetId===asset.id&&d.sourceRevisionId===revision.id).map(d=>({id:d.id,name:d.name,sourceRevisionId:d.sourceRevisionId,version:d.version,reviewed:d.reviewed?1:0})):[];
-   if(!isDemo){items=(await request<{items:Saved[]}>('/api/animations?assetId='+asset.id)).items.filter(s=>s.sourceRevisionId===revision.id);if(!cache.current.has(key)&&items.length)next=await request<AnimationDocument>('/api/animations?id='+items[0].id);}
+   if(!isDemo){const all=(await request<{items:Saved[]}>('/api/animations?assetId='+asset.id)).items;items=all.filter(s=>s.sourceRevisionId===revision.id);if(!cache.current.has(key)){if(items.length)next=await request<AnimationDocument>('/api/animations?id='+items[0].id);else if(revision.parentRevisionId){const parent=findParentAnimation(all,asset.revisions,revision);if(parent){const previous=await request<AnimationDocument>('/api/animations?id='+parent.id);next=inheritAnimation(previous,initial);}}}}
+   else if(!cache.current.has(key)&&!items.length&&revision.parentRevisionId){const previous=findParentAnimation([...demoHistory.current.values()].reverse().filter(d=>d.assetId===asset.id),asset.revisions,revision);if(previous)next=inheritAnimation(previous,initial);}
    if(dead)return;setMesh(initialMesh);setDoc(next);setSaved(items);setDirty(false);setQualityConfirmed(false);setPart(initialMesh.parts?.[0]?.id||'');loaded.current=key;
   })().catch(e=>{if(!dead)setError(e.message);}).finally(()=>{if(!dead)setBusy(false);});return()=>{dead=true;};
  },[open,key]);
