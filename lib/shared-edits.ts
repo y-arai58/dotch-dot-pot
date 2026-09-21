@@ -30,13 +30,13 @@ function interpolateWeights(weights:Influence[][],coefficients:V3):Influence[]{
  return all.map(([bone,weight])=>({bone,weight:weight/total}));
 }
 /** Split a surface, preserving texture coordinates, joint weights, and original triangle coordinates. */
-function triangulate(t:Triangle,polygon:V2[],paint=t.paint):Triangle[]{
+function triangulate(t:Triangle,polygon:V2[],paint=t.paint,surfacePaint=t.surfacePaint):Triangle[]{
  if(!valid(polygon))return [];
  const out:Triangle[]=[],source=t.sourceUV!;
  for(let i=1;i<polygon.length-1;i++){
   const uv=[polygon[0],polygon[i],polygon[i+1]] as [V2,V2,V2];if(!valid(uv))continue;
   const weights=uv.map(p=>localBary(p,source));
-  out.push({...t,vertices:weights.map(w=>combine(t.vertices,w)) as [V3,V3,V3],sourceUV:uv,paint,
+  out.push({...t,vertices:weights.map(w=>combine(t.vertices,w)) as [V3,V3,V3],sourceUV:uv,paint,surfacePaint,
    ...(t.uv?{uv:weights.map(w=>combine(t.uv!,w)) as [V2,V2,V2]}:{}),
    ...(t.weights?{weights:weights.map(w=>interpolateWeights(t.weights!,w)) as [Influence[],Influence[],Influence[]]}:{}),
   });
@@ -54,7 +54,7 @@ function paintTriangle(t:Triangle,patch:SurfacePaint):Triangle[]{
   const distance=(p:V2)=>cross2(mask[i],mask[(i+1)%mask.length],p);
   result.push(...triangulate(t,clipUV(inside,p=>-distance(p))));inside=clipUV(inside,distance);
  }
- result.push(...triangulate(t,inside,{color:patch.color,shade:patch.shade}));return result;
+ result.push(...triangulate(t,inside,{color:patch.color,shade:patch.shade},true));return result;
 }
 /** Detect accidental topology drift; this fingerprint is not used for authentication. */
 export function meshFingerprint(mesh:Mesh){let hash=2166136261;for(const t of mesh.triangles){const value=JSON.stringify([t.partId,t.vertices,t.uv]);for(let i=0;i<value.length;i++)hash=Math.imul(hash^value.charCodeAt(i),16777619);}return `mesh-v1-${mesh.triangles.length}-${(hash>>>0).toString(16)}`;}
@@ -66,8 +66,8 @@ export function partCenters(mesh:Mesh){
  return new Map([...bounds].map(([id,b])=>[id,b.min.map((v,i)=>(v+b.max[i])/2) as V3]));
 }
 export function applySharedEdits(base:Mesh,edits?:SharedEdits):Mesh{
- if(!edits||(!edits.paints.length&&!Object.keys(edits.parts).length&&!Object.keys(edits.partColors||{}).length))return base;
- if(edits.version!==1||edits.paints.length>MAX_SURFACE_PAINTS||Object.keys(edits.partColors||{}).length>200)throw Error('共通修正の上限を超えています');
+ if(!edits||(!edits.paints.length&&!Object.keys(edits.parts).length&&!Object.keys(edits.partColors||{}).length&&!Object.keys(edits.colorReplacements||{}).length))return base;
+ if(edits.version!==1||edits.paints.length>MAX_SURFACE_PAINTS||Object.keys(edits.partColors||{}).length>200||Object.keys(edits.colorReplacements||{}).length>200)throw Error('共通修正の上限を超えています');
  if(edits.source!==meshFingerprint(base))throw Error('元モデルの構造が変わっています。元のモデルを復元してから修正を読み込んでください');
  const centers=partCenters(base),byTriangle=new Map<number,SurfacePaint[]>();
  for(const id of Object.keys(edits.parts))if(!centers.has(id))throw Error('修正するパーツが元モデルにありません');
@@ -75,35 +75,45 @@ export function applySharedEdits(base:Mesh,edits?:SharedEdits):Mesh{
   if(!centers.has(id))throw Error('色を変更するパーツが元モデルにありません');
   if(!/^#[0-9a-fA-F]{6}$/.test(color.color)||![.62,1,1.2].includes(color.shade))throw Error('パーツの色が不正です');
  }
+ for(const [id,rules] of Object.entries(edits.colorReplacements||{})){
+  if(!centers.has(id))throw Error('色を変更するパーツが元モデルにありません');
+  if(!rules.length||rules.length>32||rules.some(r=>!/^#[0-9a-fA-F]{6}$/.test(r.from)||!/^#[0-9a-fA-F]{6}$/.test(r.color)||![.62,1,1.2].includes(r.shade)))throw Error('色の置き換え設定が不正です');
+ }
  for(const p of edits.paints){if(!base.triangles[p.triangle])throw Error('修正する表面が元モデルにありません');const list=byTriangle.get(p.triangle)||[];list.push(p);byTriangle.set(p.triangle,list);}
  const triangles:Triangle[]=[];
  for(let i=0;i<base.triangles.length;i++){
   const original=base.triangles[i],transform=original.partId&&Object.hasOwn(edits.parts,original.partId)?edits.parts[original.partId]:undefined,center=original.partId?centers.get(original.partId):undefined;
   const partColor=original.partId&&edits.partColors&&Object.hasOwn(edits.partColors,original.partId)?edits.partColors[original.partId]:undefined;
-  const t:Triangle={...original,...(partColor?{paint:partColor}:{}),sourceIndex:i,sourceUV:[[0,0],[1,0],[0,1]],vertices:transform&&center?original.vertices.map(v=>v.map((n,a)=>center[a]+(n-center[a])*transform.scale[a]+transform.offset[a]) as V3) as [V3,V3,V3]:original.vertices};
+  const replacements=original.partId&&edits.colorReplacements&&Object.hasOwn(edits.colorReplacements,original.partId)?edits.colorReplacements[original.partId]:undefined;
+  const t:Triangle={...original,...(partColor?{paint:partColor}:{}),colorReplacements:replacements,sourceIndex:i,sourceUV:[[0,0],[1,0],[0,1]],vertices:transform&&center?original.vertices.map(v=>v.map((n,a)=>center[a]+(n-center[a])*transform.scale[a]+transform.offset[a]) as V3) as [V3,V3,V3]:original.vertices};
   let pieces=[t];for(const patch of byTriangle.get(i)||[]){pieces=pieces.flatMap(piece=>paintTriangle(piece,patch));if(pieces.length+triangles.length>MAX_EDITED_TRIANGLES)throw Error('表面の修正が細かすぎます。修正範囲を小さくしてください');}
   triangles.push(...pieces);if(triangles.length>MAX_EDITED_TRIANGLES)throw Error('修正後の面数が上限を超えています');
  }
  return {...base,triangles};
 }
 
-export type PartColorProposal=PartColor&{partId:string;pixels:number;hasMultipleColors:boolean;colors:(PartColor&{pixels:number})[];indices:number[]};
+export type PartColorProposal=PartColor&{partId:string;pixels:number;hasMultipleColors:boolean;colors:(PartColor&{pixels:number})[];materials:{color:string;shade:number;pixels:number;indices:number[]}[];indices:number[]};
 /** Suggest one whole-part color from the painted pixels; separate markings remain an explicit surface-edit choice. */
 export function capturePartColors(mesh:Mesh,revision:Revision,direction:Direction):{proposals:PartColorProposal[];transferred:number[];localOnly:number[]}{
  const hits:(SurfaceHit|undefined)[]=new Array(4096),before=renderFrame(mesh,revision.style,direction,revision.size,revision.facing,hits),edited=revision.frames.find(f=>f.direction===direction);
  if(!edited)throw Error('修正した方向が見つかりません');
- const groups=new Map<string,{indices:number[];colors:Map<string,{pixels:number;shades:Map<number,number>}>}>(),transferred:number[]=[],localOnly:number[]=[];
+ const groups=new Map<string,{indices:number[];colors:Map<string,{pixels:number;shades:Map<number,number>}>;materials:Map<string,number[]>}>(),transferred:number[]=[],localOnly:number[]=[];
  for(let at=0;at<4096;at++){
   const index=edited.body[at];if(index===before.body[at])continue;
   const hit=hits[at],partId=hit&&mesh.triangles[hit.triangle].partId,color=revision.style.palette[index-1];
   if(!index||!hit||!partId||!color){localOnly.push(at);continue;}
-  let group=groups.get(partId);if(!group){group={indices:[],colors:new Map()};groups.set(partId,group);}
+  let group=groups.get(partId);if(!group){group={indices:[],colors:new Map(),materials:new Map()};groups.set(partId,group);}
   const normalized=color.toLowerCase();let choice=group.colors.get(normalized);if(!choice){choice={pixels:0,shades:new Map()};group.colors.set(normalized,choice);}
   choice.pixels++;choice.shades.set(hit.shade,(choice.shades.get(hit.shade)||0)+1);group.indices.push(at);transferred.push(at);
+  if(!hit.surfacePaint){const points=group.materials.get(hit.materialColor)||[];points.push(at);group.materials.set(hit.materialColor,points);}
  }
  const proposals=[...groups].map(([partId,group])=>{
   const colors=[...group.colors].map(([color,choice])=>({color,pixels:choice.pixels,shade:[...choice.shades].sort((a,b)=>b[1]-a[1])[0][0]})).sort((a,b)=>b.pixels-a.pixels);
-  return {partId,color:colors[0].color,shade:colors[0].shade,pixels:group.indices.length,hasMultipleColors:colors.length>1,colors,indices:group.indices};
+  const materials=[...group.materials].map(([color,indices])=>{
+   const shades=new Map<number,number>();for(const at of indices){const shade=hits[at]!.shade;shades.set(shade,(shades.get(shade)||0)+1);}
+   return {color,indices,pixels:indices.length,shade:[...shades].sort((a,b)=>b[1]-a[1])[0][0]};
+  }).sort((a,b)=>b.pixels-a.pixels);
+  return {partId,color:colors[0].color,shade:colors[0].shade,pixels:group.indices.length,hasMultipleColors:colors.length>1,colors,materials,indices:group.indices};
  });
  return {proposals,transferred,localOnly};
 }
@@ -131,15 +141,16 @@ export function captureSurfacePaint(mesh:Mesh,revision:Revision,direction:Direct
 }
 
 /** Keep edits that cannot be represented on a surface in their original direction. */
-export function previewSharedRevision(base:Mesh,revision:Revision,direction:Direction,edits:SharedEdits,transferred:number[]){
+export function previewSharedRevision(base:Mesh,revision:Revision,direction:Direction,edits:SharedEdits,transferred:number[],preserveSource=false){
  const originalMesh=applySharedEdits(base,revision.sharedEdits),nextMesh=applySharedEdits(base,edits);
  const baseline=renderSet(originalMesh,revision.style,revision.mode,revision.size,revision.facing),baseFrames=renderSet(nextMesh,revision.style,revision.mode,revision.size,revision.facing),frames=clone(baseFrames),applied=new Set(transferred);
- let localOnly=0;
+ let localOnly=0,sourceOnly=0;
  for(const f of frames){const old=revision.frames.find(v=>v.direction===f.direction)!,before=baseline.find(v=>v.direction===f.direction)!;
+  if(preserveSource&&f.direction===direction){sourceOnly=f.body.reduce((n,v,i)=>n+Number(v!==old.body[i]||f.shadow[i]!==old.shadow[i]),0);f.body=[...old.body];f.shadow=[...old.shadow];continue;}
   for(let at=0;at<4096;at++){
    if(old.body[at]!==before.body[at]&&f.body[at]!==old.body[at]&&!(f.direction===direction&&applied.has(at))){f.body[at]=old.body[at];localOnly++;}
    if(old.shadow[at]!==before.shadow[at]&&f.shadow[at]!==old.shadow[at]){f.shadow[at]=old.shadow[at];localOnly++;}
   }
  }
- return {mesh:nextMesh,frames,baseFrames,localOnly};
+ return {mesh:nextMesh,frames,baseFrames,localOnly,sourceOnly};
 }

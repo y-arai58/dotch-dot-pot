@@ -1,4 +1,4 @@
-import type {SharedEdits,V2} from './shared-edit-types';
+import type {SharedEdits,V2,ColorReplacement} from './shared-edit-types';
 export const RENDERER_VERSION = 'orthographic-topdown-v2';
 export const DIRECTIONS = ['S','SE','E','NE','N','NW','W','SW'] as const;
 export type Direction = typeof DIRECTIONS[number];
@@ -6,7 +6,7 @@ export type V3 = [number,number,number];
 export type Part = { id:string; shape:'box'|'ellipsoid'|'cylinder'|'cone'; position:V3; size:V3; color:string; rotation?:V3 };
 export type Model = { id:string; name:string; prompt:string; features:string[]; parts:Part[] };
 export type Influence = {bone:string;weight:number};
-export type Triangle = { vertices:[V3,V3,V3]; color:string; uv?:[[number,number],[number,number],[number,number]]; texture?:string; partId?:string; weights?:[Influence[],Influence[],Influence[]];sourceIndex?:number;sourceUV?:[V2,V2,V2];paint?:{color:string;shade:number} };
+export type Triangle = { vertices:[V3,V3,V3]; color:string; uv?:[[number,number],[number,number],[number,number]]; texture?:string; partId?:string; weights?:[Influence[],Influence[],Influence[]];sourceIndex?:number;sourceUV?:[V2,V2,V2];paint?:{color:string;shade:number};surfacePaint?:boolean;colorReplacements?:ColorReplacement[] };
 export type Texture = {width:number;height:number;data:Uint8ClampedArray};
 export type Mesh = {triangles:Triangle[];textures?:Record<string,Texture>;parts?:{id:string;name:string}[];skeleton?:{id:string;parent?:string;pivot:V3}[]};
 export type Style = {id:string;name:string;palette:string[];light:number;lightHeight:number;elevation:number;outline:boolean;shadow:boolean;scale:number;anchor:[number,number]};
@@ -52,7 +52,7 @@ export function buildMesh(model:Model):Mesh{
  }
  return {triangles,parts:model.parts.map(p=>({id:p.id,name:p.id}))};
 }
-export type SurfaceHit={triangle:number;bary:V3;shade:number};
+export type SurfaceHit={triangle:number;bary:V3;shade:number;materialColor:string;surfacePaint:boolean};
 export function projectToScreen(point:V3,style:Style,direction:Direction,size=1,facing=0):V3{
  const v=rotate(point.map(n=>n*size) as V3,[0,0,radians(DIRECTIONS.indexOf(direction)*45+facing)]),el=radians(style.elevation);
  return [style.anchor[0]+v[0]*style.scale,style.anchor[1]-(v[1]*Math.sin(el)+v[2]*Math.cos(el))*style.scale,-v[1]*Math.cos(el)+v[2]*Math.sin(el)];
@@ -77,9 +77,11 @@ export function renderFrame(mesh:Mesh,style:Style,direction:Direction,size=1,fac
    const z=aa*p[2]+b*q[2]+c*r[2];if(z<depth[at])continue;
    let base=rgb(triangle?.paint?.color||color);const tex=triangle?.texture&&mesh.textures?.[triangle.texture];
    if(tex&&triangle?.uv){const uv=triangle.uv;const u=aa*uv[0][0]+b*uv[1][0]+c*uv[2][0],v=aa*uv[0][1]+b*uv[1][1]+c*uv[2][1];const tx=Math.max(0,Math.min(tex.width-1,Math.floor(u*tex.width))),ty=Math.max(0,Math.min(tex.height-1,Math.floor(v*tex.height)));const ti=(ty*tex.width+tx)*4;if(tex.data[ti+3]<128)continue;if(!triangle.paint)base=[0,1,2].map(j=>tex.data[ti+j]*base[j]/255) as V3;}
-   const shading=shade/(triangle?.paint?.shade||1),key=base.map(n=>Math.round(n*shading)).join(',');let index=cache.get(key);if(index===undefined){index=nearestColor(base.map(n=>Math.min(255,n*shading)) as V3,style.palette);cache.set(key,index);}
+   let baseShade=triangle?.paint?.shade||1;
+   if(!triangle?.surfacePaint)for(const rule of triangle?.colorReplacements||[]){const from=rgb(rule.from);if(base.every((n,i)=>Math.round(n)===from[i])){base=rgb(rule.color);baseShade=rule.shade;}}
+   const shading=shade/baseShade,key=base.map(n=>Math.round(n*shading)).join(',');let index=cache.get(key);if(index===undefined){index=nearestColor(base.map(n=>Math.min(255,n*shading)) as V3,style.palette);cache.set(key,index);}
    body[at]=index;depth[at]=z;
-   if(hits&&triangleIndex!==undefined)hits[at]={triangle:triangleIndex,bary:[aa,b,c],shade};
+   if(hits&&triangleIndex!==undefined)hits[at]={triangle:triangleIndex,bary:[aa,b,c],shade,materialColor:'#'+base.map(n=>Math.round(n).toString(16).padStart(2,'0')).join(''),surfacePaint:!!triangle?.surfacePaint};
   }
  }
  for(const [triangleIndex,t] of mesh.triangles.entries()){

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {writeFileSync} from 'node:fs';
 import {buildMesh,renderFrame,renderSet,DEFAULT_STYLE,clone,RENDERER_VERSION,type Asset,type Revision,type SurfaceHit} from '../lib/pixel';
-import {capturePartColors,emptySharedEdits,previewSharedRevision} from '../lib/shared-edits';
+import {sharedEditProposal} from '../lib/shared-edit-proposal';
 import samples from '../lib/animal-samples.json';
 import {parseAnimal} from '../lib/animal-contracts';
 
@@ -17,8 +17,10 @@ const saved=initial.data as Asset,draft=clone(saved),source=draft.revisions[0],h
 renderFrame(base,style,'S',1,0,hits);const at=hits.findIndex(h=>h&&base.triangles[h.triangle].partId===model.parts.find(p=>p.bone==='head')!.id);assert.ok(at>=0);source.frames[0].body[at]=source.frames[0].body[at]===20?32:20;
 // An unshared edit must survive in the new candidate without overwriting its source revision.
 source.frames[4].body[0]=19;
-const captured=capturePartColors(base,source,'S'),edits={...emptySharedEdits(base),partColors:Object.fromEntries(captured.proposals.map(p=>[p.partId,{color:p.color,shade:p.shade}]))},preview=previewSharedRevision(base,source,'S',edits,captured.transferred);
-assert.ok(captured.proposals.length>0,'実際の色変更を新候補に反映する');
+const preview=sharedEditProposal(base,source,'S',{method:'color',preserveSource:true,choices:{},parts:{}}),edits=preview.edits;
+assert.ok(preview.transferred.length>0,'実際の色変更を新候補に反映する');
+assert.ok(Object.keys(edits.colorReplacements||{}).length>0,'模様を残す色置き換えを保存する');
+assert.deepEqual(preview.frames[0],source.frames[0],'修正元は描き込み後と一致する');
 const candidate:Revision={...clone(source),id:crypto.randomUUID(),parentRevisionId:source.id,sharedEdits:edits,frames:preview.frames,baseFrames:preview.baseFrames};
 // Regression: the old UI submitted the painted original and candidate together.
 const overwrite=await call('/api/studio',{action:'asset',asset:{...draft,revisions:[source,candidate]}});
@@ -28,6 +30,7 @@ const next={...saved,revisions:[...saved.revisions,candidate]};
 const result=await call('/api/studio',{action:'asset',asset:next});assert.equal(result.status,200,JSON.stringify(result.data));
 const reloaded=(await call('/api/studio?assetId='+assetId)).data as Asset;
 assert.deepEqual(reloaded.revisions[0],saved.revisions[0],'未採用の元版も全方向・色・設定を保持');
+assert.deepEqual(reloaded.revisions[1].sharedEdits,candidate.sharedEdits,'地色の置き換えと表面の保持を復元する');
 assert.deepEqual(reloaded.revisions[1].frames,candidate.frames,'新候補だけに修正を保存');assert.equal(reloaded.revisions[1].frames[4].body[0],19,'共有対象外の描き込みも新候補に保持');
 assert.equal((await call('/api/studio',{action:'asset',asset:next})).status,409,'古い保存版からの再送は競合として拒否');
 // Saving a drawing explicitly remains supported, without adding a candidate.

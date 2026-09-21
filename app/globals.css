@@ -43,3 +43,21 @@
 .shared-edit-controls{max-height:65vh;overflow:auto}
 .shared-edit-footer{position:sticky;bottom:0;background:#171c24}
 @media(max-width:760px){.shared-edit-controls{max-height:none;overflow:visible}}
+.shared-edit-preview{min-width:0}
+.shared-comparison{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.shared-comparison figure{min-width:0;margin:0;padding:10px;border:1px solid var(--border);border-radius:8px;background:#111720}
+.shared-comparison figcaption{font-size:12px;text-align:center;color:#c6ced8;margin-bottom:8px}
+.shared-comparison .pixel-wrapper{margin:auto;height:auto!important;aspect-ratio:1;background-color:#20252c;background-image:conic-gradient(#2b3038 25%,transparent 0 50%,#2b3038 0 75%,transparent 0);background-size:16px 16px}
+.shared-comparison canvas{height:auto!important;aspect-ratio:1}
+.shared-diff-legend{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:#b9c2cd;margin:9px 0 22px}
+.shared-diff-legend span{display:inline-flex;align-items:center;gap:5px}
+.shared-diff-legend i{width:9px;height:9px;border-radius:2px}
+.shared-direction-grid>button{min-width:0;display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);border-radius:8px;padding:7px;background:#111720;color:#adb9c5}
+.shared-direction-grid>button.selected{border-color:var(--primary);background:#232d22}
+.shared-direction-grid>button>span{display:block;font-size:12px;text-align:center;padding:4px}
+.shared-direction-grid>button strong{display:block;font-size:11px;font-weight:500;margin-top:4px;color:#d5efb5}
+.shared-direction-grid .pixel-wrapper{height:auto!important;aspect-ratio:1}
+.shared-color-part>label.shared-color-select{display:block;font-size:12px;color:#b8c1cd;margin-top:10px}
+.shared-color-select select{margin-top:4px}
+.shared-edit-controls .shared-isolate{font-size:13px}
+@media(max-width:500px){.shared-comparison{gap:5px}.shared-comparison figure{padding:5px}.shared-comparison figcaption{font-size:10px}.shared-diff-legend{font-size:11px;justify-content:flex-start}}

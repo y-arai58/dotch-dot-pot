@@ -13,4 +13,5 @@ export const sharedEditsSchema=z.object({
  paints:z.array(z.object({triangle:z.number().int().min(0).max(59999),polygon,color:z.string().regex(/^#[0-9a-fA-F]{6}$/),shade:z.union([z.literal(.62),z.literal(1),z.literal(1.2)])}).strict()).max(MAX_SURFACE_PAINTS),
  parts:z.record(z.string().min(1).max(200),z.object({offset:vector(-3,3),scale:vector(.1,3)}).strict()).refine(parts=>Object.keys(parts).length<=200),
  partColors:z.record(z.string().min(1).max(200),partColorSchema).refine(colors=>Object.keys(colors).length<=200).optional(),
-}).strict().refine(edits=>!edits.paints.length&&!Object.keys(edits.parts).length&&!Object.keys(edits.partColors||{}).length||!!edits.source);
+ colorReplacements:z.record(z.string().min(1).max(200),z.array(partColorSchema.extend({from:z.string().regex(/^#[0-9a-fA-F]{6}$/)}).strict()).min(1).max(32)).refine(parts=>Object.keys(parts).length<=200).optional(),
+}).strict().refine(edits=>!edits.paints.length&&!Object.keys(edits.parts).length&&!Object.keys(edits.partColors||{}).length&&!Object.keys(edits.colorReplacements||{}).length||!!edits.source);
