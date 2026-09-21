@@ -61,3 +61,12 @@
 .shared-color-select select{margin-top:4px}
 .shared-edit-controls .shared-isolate{font-size:13px}
 @media(max-width:500px){.shared-comparison{gap:5px}.shared-comparison figure{padding:5px}.shared-comparison figcaption{font-size:10px}.shared-diff-legend{font-size:11px;justify-content:flex-start}}
+.tail-select{margin:14px 0!important;font-size:14px}
+.tail-controls{padding:16px;margin-bottom:24px;border:1px solid #647a45;border-radius:8px;background:#242d21}
+.tail-controls h3{margin:0 0 8px;font-size:16px}
+.tail-controls .field-label{font-size:14px;margin:16px 0 7px}
+.tail-controls [data-slot="select-trigger"]{width:100%;font-size:14px}
+.tail-controls .motion-range label{font-size:14px}
+.tail-controls .button{font-size:13px;white-space:normal}
+.tail-controls .help{font-size:12px}
+.tail-key-note{margin-top:14px;border-top:1px solid #526246}

@@ -1,5 +1,6 @@
 import {clone,renderSet,validateFrames,type Mesh,type Model,type Style,type V3} from './pixel';
 import {qEuler,qFromTo,qMultiply,qRotate,solveLeg,packFrame,type Quat,type BonePose,type MotionKind,type Keyframe,type BakedClip} from './animation';
+import {tailRotations,tailUndersampled,type TailSettings} from './animal-tail';
 
 export const ANIMAL_MOTION_VERSION='quadruped-ik-v1';
 export const ANIMAL_BONES=['root','body','chest','neck','head','tailBase','tailTip','frontUpperL','frontLowerL','frontPawL','frontUpperR','frontLowerR','frontPawR','hindUpperL','hindLowerL','hindPawL','hindUpperR','hindLowerR','hindPawR'] as const;
@@ -11,7 +12,7 @@ export type Paw=typeof PAWS[number];
 export const WALK_DUTY=.75;
 export type AnimalRig={bones:{id:AnimalBone;parent?:AnimalBone;pivot:V3}[];bindings:Record<string,AnimalBone>;reviewed:boolean;origin:'sample'|'skill'};
 export type AnimalModel=Omit<Model,'parts'>&{parts:(Model['parts'][number]&{bone:AnimalBone})[];rig:{bones:AnimalRig['bones']};motionCorrections?:Partial<Record<AnimalBone,V3>>};
-export type AnimalClip={id:MotionKind;name:string;frames:number;fps:number;loop:boolean;stride:number;lift:number;depth:number;height:number;tailSwing:number;hold:number;keys:Partial<Record<AnimalBone,Keyframe[]>>};
+export type AnimalClip={id:MotionKind;name:string;frames:number;fps:number;loop:boolean;stride:number;lift:number;depth:number;height:number;tailSwing:number;tail?:TailSettings;hold:number;keys:Partial<Record<AnimalBone,Keyframe[]>>};
 export type AnimalConfig={version:typeof ANIMAL_MOTION_VERSION;rig:AnimalRig;clips:AnimalClip[];scale:number;facing:number;style:Style;mode:'front'|'eight'};
 export type AnimalDocument={id:string;assetId:string;sourceRevisionId:string;name:string;config:AnimalConfig;baked:BakedClip[];version:number;updatedAt:string;reviewed:boolean};
 export type AnimalPose={bones:Record<AnimalBone,BonePose>;contacts:Record<Paw,boolean>;rootHeight:number;issues:string[]};
@@ -51,6 +52,7 @@ export function pawTrajectory(clip:AnimalClip,paw:Paw,phase:number){
 }
 export function animalPose(rig:AnimalRig,clip:AnimalClip,frame:number):AnimalPose{
  const issues=animalRigIssues(rig);if(issues.length)throw Error(issues[0]);if(clip.id==='walk'&&clip.frames<8)issues.push('四足歩行は8コマ以上にしてください');
+ if(clip.tail&&tailUndersampled(clip.tail,clip.frames))issues.push('尻尾の1周期につき4コマ以上必要です');
  const bind=Object.fromEntries(rig.bones.map(b=>[b.id,b.pivot])) as Record<AnimalBone,V3>,bones={} as AnimalPose['bones'],contacts=Object.fromEntries(PAWS.map(p=>[p,true])) as Record<Paw,boolean>;
  const phase=animalPhase(clip,frame),tau=phase*2*Math.PI;let drop=0,rootHeight=0,lean=0;
  if(clip.id==='idle')drop=.006*(1-Math.cos(tau));
@@ -58,7 +60,8 @@ export function animalPose(rig:AnimalRig,clip:AnimalClip,frame:number):AnimalPos
  if(clip.id==='crouch'){const edge=(1-clip.hold)/2,amount=phase<edge?smooth(phase/edge):phase>1-edge?smooth((1-phase)/edge):1;drop=clip.depth*amount;lean=3*amount;}
  if(clip.id==='jump'){if(phase<.2)drop=clip.depth*.5*smooth(phase/.2);else if(phase<.75){const u=(phase-.2)/.55;rootHeight=clip.height*4*u*(1-u);drop=clip.depth*.5*(1-smooth(u/.18));if(rootHeight>1e-8)for(const paw of PAWS)contacts[paw]=false;}else{const u=(phase-.75)/.25;drop=clip.depth*.4*Math.sin(Math.PI*u);}}
  function child(id:AnimalBone,rotation:Quat=I){const parent=ANIMAL_PARENTS[id];if(!parent){bones[id]={position:[0,0,rootHeight],rotation:I};return;}const p=bones[parent];bones[id]={position:add(p.position,qRotate(sub(bind[id],bind[parent]),p.rotation)),rotation:qMultiply(p.rotation,rotation)};}
- child('root');child('body',qEuler([lean,0,0]));bones.body.position[2]-=drop;child('chest');child('neck',qEuler([-lean,0,0]));child('head');child('tailBase',qEuler([0,0,Math.sin(tau)*clip.tailSwing]));child('tailTip',qEuler([0,0,Math.sin(tau-.4)*clip.tailSwing*.5]));
+ const tail=tailRotations(rig,clip,phase);
+ child('root');child('body',qEuler([lean,0,0]));bones.body.position[2]-=drop;child('chest');child('neck',qEuler([-lean,0,0]));child('head');child('tailBase',tail.base);child('tailTip',tail.tip);
  for(const group of ['front','hind'] as const)for(const side of ['L','R'] as const){const upper=`${group}Upper${side}` as AnimalBone,lower=`${group}Lower${side}` as AnimalBone,paw=`${group}Paw${side}` as Paw;child(upper);let target=add(bind[paw],[0,0,rootHeight]);if(clip.id==='walk'){const trajectory=pawTrajectory(clip,paw,phase);target=add(target,[0,trajectory.y,trajectory.z]);contacts[paw]=trajectory.contact;}
   const solution=solveLeg(bones[upper].position,target,len(sub(bind[lower],bind[upper])),len(sub(bind[paw],bind[lower])),[0,group==='front'?1:-1,0]);
   if(solution.unreachable)issues.push(`${ANIMAL_NAMES[paw]}が届きません。歩幅・伏せの深さ・支点を調整してください`);

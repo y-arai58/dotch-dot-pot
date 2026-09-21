@@ -3,6 +3,7 @@ import {idSchema,styleSchema} from './contracts';
 import {ANIMAL_BONES,ANIMAL_MOTION_VERSION,animalRig,animalRigIssues,animalPose,type AnimalModel,type AnimalDocument} from './animal-animation';
 import {buildMesh,validateFrames} from './pixel';
 import {unpackFrame} from './animation';
+import {TAIL_DIRECTIONS,TAIL_PATTERNS,tailUndersampled} from './animal-tail';
 const vector=z.tuple([z.number().finite().min(-5).max(5),z.number().finite().min(-5).max(5),z.number().finite().min(-5).max(5)]);
 const angles=z.tuple([z.number().min(-90).max(90),z.number().min(-90).max(90),z.number().min(-90).max(90)]);
 const boneId=z.enum(ANIMAL_BONES),motionId=z.enum(['idle','walk','crouch','jump']);
@@ -14,7 +15,8 @@ export function parseAnimal(value:unknown):AnimalModel{
  for(const bone of ANIMAL_BONES.filter(id=>id!=='root'))if(!model.parts.some(p=>p.bone===bone))issues.push(`${bone}の部品がありません`);
  if(issues.length)throw Error(issues.join('\n'));return model;
 }
-const clip=z.object({id:motionId,name:z.string().min(1).max(40),frames:z.number().int().min(4).max(24),fps:z.number().int().min(4).max(24),loop:z.boolean(),stride:z.number().min(0).max(.6),lift:z.number().min(0).max(.3),depth:z.number().min(0).max(.4),height:z.number().min(0).max(.6),tailSwing:z.number().min(0).max(35),hold:z.number().min(.1).max(.7),keys:z.record(boneId,z.array(z.object({frame:z.number().int().min(0).max(23),rotation:angles})).max(24))}).refine(c=>c.id!=='walk'||c.frames>=8,{message:'四足歩行は8コマ以上にしてください'});
+export const tailSettingsSchema=z.object({direction:z.enum(TAIL_DIRECTIONS),pattern:z.enum(TAIL_PATTERNS),amplitude:z.number().finite().min(0).max(35),cycles:z.number().int().min(1).max(3)}).strict();
+const clip=z.object({id:motionId,name:z.string().min(1).max(40),frames:z.number().int().min(4).max(24),fps:z.number().int().min(4).max(24),loop:z.boolean(),stride:z.number().min(0).max(.6),lift:z.number().min(0).max(.3),depth:z.number().min(0).max(.4),height:z.number().min(0).max(.6),tailSwing:z.number().min(0).max(35),tail:tailSettingsSchema.optional(),hold:z.number().min(.1).max(.7),keys:z.record(boneId,z.array(z.object({frame:z.number().int().min(0).max(23),rotation:angles})).max(24))}).refine(c=>c.id!=='walk'||c.frames>=8,{message:'四足歩行は8コマ以上にしてください'}).refine(c=>!c.tail||!tailUndersampled(c.tail,c.frames),{message:'尻尾の1周期につき4コマ以上必要です'});
 const packed=z.object({direction:z.enum(['S','SE','E','NE','N','NW','W','SW']),body:z.string().max(6000),shadow:z.string().max(6000),clipped:z.boolean()});
 export const animalAnimationSchema=z.object({id:idSchema,assetId:idSchema,sourceRevisionId:idSchema,name:z.string().min(1).max(100),config:z.object({version:z.literal(ANIMAL_MOTION_VERSION),rig:z.object({bones,bindings:z.record(z.string().max(200),boneId),reviewed:z.boolean(),origin:z.enum(['sample','skill'])}),clips:z.array(clip).min(1).max(4),scale:z.number().min(.1).max(2),facing:z.number().min(0).max(315).multipleOf(45),style:styleSchema,mode:z.enum(['front','eight'])}),baked:z.array(z.object({id:motionId,frames:z.array(z.array(packed).min(1).max(8)).min(4).max(24),issues:z.array(z.string().max(300)).max(1000),events:z.array(z.object({frame:z.number().int().min(0).max(23),name:z.string().max(50)})).max(200)})).max(4),version:z.number().int().min(0),updatedAt:z.string(),reviewed:z.boolean()});
 export function animalAnimationIssues(doc:AnimalDocument){

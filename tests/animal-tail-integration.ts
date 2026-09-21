@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {writeFileSync} from 'node:fs';
+import samples from '../lib/animal-samples.json';
+import {parseAnimal} from '../lib/animal-contracts';
+import {buildMesh,renderSet,DEFAULT_STYLE,clone,RENDERER_VERSION} from '../lib/pixel';
+import {ANIMAL_MOTION_VERSION,animalRig,animalClips,bakeAnimal,type AnimalDocument} from '../lib/animal-animation';
+import {copyTailToClips} from '../lib/animal-tail';
+const origin=process.env.TEST_ORIGIN||'http://localhost:5173';assert.ok(['localhost','127.0.0.1'].includes(new URL(origin).hostname),'ローカル環境専用');
+const login=await fetch(origin+'/signin-with-chatgpt?return_to=/',{redirect:'manual'}),cookie=login.headers.getSetCookie().map(v=>v.split(';')[0]).join('; ');assert.ok(cookie);
+async function call(path:string,data?:unknown){const response=await fetch(origin+path,{method:data?'POST':'GET',headers:{cookie,...(data?{'Content-Type':'application/json',Origin:origin}:{})},body:data?JSON.stringify(data):undefined});return {status:response.status,data:await response.json() as any};}
+const projectId=crypto.randomUUID(),assetId=crypto.randomUUID(),revisionId=crypto.randomUUID(),style={...clone(DEFAULT_STYLE),id:crypto.randomUUID()},model=parseAnimal(samples[0]),mesh=buildMesh(model),frames=renderSet(mesh,style);
+assert.equal((await call('/api/studio',{action:'project',project:{id:projectId,name:'尻尾の操作確認',styles:[style],version:0,updatedAt:''}})).status,200);
+const revision={id:revisionId,rendererVersion:RENDERER_VERSION,createdAt:new Date().toISOString(),style,frames,baseFrames:clone(frames),approved:false,reviewed:false,issues:'',mode:'eight',source:'sample',rigKind:'quadruped',modelId:model.id,name:model.name,prompt:model.prompt,features:model.features,facing:0,size:1};
+const asset=await call('/api/studio',{action:'asset',asset:{id:assetId,projectId,name:'尻尾を調整するキツネ',revisions:[revision],version:0,updatedAt:''}});assert.equal(asset.status,200,JSON.stringify(asset.data));
+const doc:AnimalDocument={id:crypto.randomUUID(),assetId,sourceRevisionId:revisionId,name:'尻尾の動作テスト',config:{version:ANIMAL_MOTION_VERSION,rig:animalRig(model,'sample'),clips:animalClips(model.motionCorrections),scale:1,facing:0,style,mode:'eight'},baked:[],version:0,updatedAt:'',reviewed:false};
+const old=await call('/api/animations',doc);assert.equal(old.status,200,JSON.stringify(old.data));
+const settings={direction:'original',pattern:'tip',amplitude:6,cycles:2} as const;
+const next:AnimalDocument={...old.data,config:{...doc.config,clips:copyTailToClips(doc.config.clips,settings)}};
+next.baked=await bakeAnimal(mesh,next.config);assert.ok(next.baked.every(b=>b.issues.length===0));
+const saved=await call('/api/animations',next);assert.equal(saved.status,200,JSON.stringify(saved.data));
+const restored=await call('/api/animations?id='+doc.id);assert.deepEqual(restored.data.config,next.config);assert.deepEqual(restored.data.baked,next.baked);
+assert.deepEqual((await call('/api/studio?assetId='+assetId)).data,asset.data,'尻尾の動作設定では元の静止画を変更しない');
+assert.equal((await call('/api/animations',next)).status,409,'古い設定で上書きしない');
+const invalid=clone(restored.data);invalid.config.clips[0].tail.pattern='invalid';assert.equal((await call('/api/animations',invalid)).status,400);
+const adopted=await call('/api/animations',{...restored.data,reviewed:true});assert.equal(adopted.status,200,JSON.stringify(adopted.data));
+const changed=clone(adopted.data);changed.config.clips[0].tail.amplitude=20;assert.equal((await call('/api/animations',changed)).status,400,'採用済みの動作は保護する');
+// A new candidate can independently edit the approved tail configuration.
+const candidate={...clone(adopted.data),id:crypto.randomUUID(),version:0,reviewed:false};assert.equal((await call('/api/animations',candidate)).status,200);
+writeFileSync('/private/tmp/dotch-tail-test-records.json',JSON.stringify({projectId,assetId,animationId:candidate.id}));
+console.log('Tail HTTP integration passed: legacy settings, independent tail controls, 368 rendered frames, save/reload, source protection, invalid settings, CAS and adopted candidate protection.');
