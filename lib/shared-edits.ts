@@ -1,5 +1,6 @@
 import {clone,projectToScreen,renderFrame,renderSet,type Mesh,type Triangle,type V3,type SurfaceHit,type Revision,type Frame,type Direction,type Influence} from './pixel';
 import {MAX_EDITED_TRIANGLES,MAX_SURFACE_PAINTS,type V2,type SharedEdits,type SurfacePaint,type PartTransform,type PartColor} from './shared-edit-types';
+import {transformPartPoint,validatePartTransform} from './part-transform';
 export type {SharedEdits,PartTransform,PartColor} from './shared-edit-types';
 
 const eps=1e-9;
@@ -70,7 +71,7 @@ export function applySharedEdits(base:Mesh,edits?:SharedEdits):Mesh{
  if(edits.version!==1||edits.paints.length>MAX_SURFACE_PAINTS||Object.keys(edits.partColors||{}).length>200||Object.keys(edits.colorReplacements||{}).length>200)throw Error('共通修正の上限を超えています');
  if(edits.source!==meshFingerprint(base))throw Error('元モデルの構造が変わっています。元のモデルを復元してから修正を読み込んでください');
  const centers=partCenters(base),byTriangle=new Map<number,SurfacePaint[]>();
- for(const id of Object.keys(edits.parts))if(!centers.has(id))throw Error('修正するパーツが元モデルにありません');
+ for(const id of Object.keys(edits.parts)){if(!centers.has(id))throw Error('修正するパーツが元モデルにありません');validatePartTransform(edits.parts[id]);}
  for(const [id,color] of Object.entries(edits.partColors||{})){
   if(!centers.has(id))throw Error('色を変更するパーツが元モデルにありません');
   if(!/^#[0-9a-fA-F]{6}$/.test(color.color)||![.62,1,1.2].includes(color.shade))throw Error('パーツの色が不正です');
@@ -85,7 +86,7 @@ export function applySharedEdits(base:Mesh,edits?:SharedEdits):Mesh{
   const original=base.triangles[i],transform=original.partId&&Object.hasOwn(edits.parts,original.partId)?edits.parts[original.partId]:undefined,center=original.partId?centers.get(original.partId):undefined;
   const partColor=original.partId&&edits.partColors&&Object.hasOwn(edits.partColors,original.partId)?edits.partColors[original.partId]:undefined;
   const replacements=original.partId&&edits.colorReplacements&&Object.hasOwn(edits.colorReplacements,original.partId)?edits.colorReplacements[original.partId]:undefined;
-  const t:Triangle={...original,...(partColor?{paint:partColor}:{}),colorReplacements:replacements,sourceIndex:i,sourceUV:[[0,0],[1,0],[0,1]],vertices:transform&&center?original.vertices.map(v=>v.map((n,a)=>center[a]+(n-center[a])*transform.scale[a]+transform.offset[a]) as V3) as [V3,V3,V3]:original.vertices};
+  const t:Triangle={...original,...(partColor?{paint:partColor}:{}),colorReplacements:replacements,sourceIndex:i,sourceUV:[[0,0],[1,0],[0,1]],vertices:transform&&center?original.vertices.map(v=>transformPartPoint(v,center,transform)) as [V3,V3,V3]:original.vertices};
   let pieces=[t];for(const patch of byTriangle.get(i)||[]){pieces=pieces.flatMap(piece=>paintTriangle(piece,patch));if(pieces.length+triangles.length>MAX_EDITED_TRIANGLES)throw Error('表面の修正が細かすぎます。修正範囲を小さくしてください');}
   triangles.push(...pieces);if(triangles.length>MAX_EDITED_TRIANGLES)throw Error('修正後の面数が上限を超えています');
  }

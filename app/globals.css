@@ -60,6 +60,26 @@
 .shared-color-part>label.shared-color-select{display:block;font-size:12px;color:#b8c1cd;margin-top:10px}
 .shared-color-select select{margin-top:4px}
 .shared-edit-controls .shared-isolate{font-size:13px}
+.part-editor-dialog{width:min(1100px,96vw)!important;max-width:min(1100px,96vw)!important;height:min(920px,94vh);max-height:94vh;display:flex;flex-direction:column;overflow:hidden}
+.part-editor-dialog [data-slot="dialog-title"]{display:flex;align-items:center;gap:8px}
+.part-editor-layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:24px;min-height:0;flex:1;overflow:hidden}
+.part-editor-controls{border-right:1px solid var(--border);padding-right:20px;min-height:0;overflow:auto}
+.part-editor-controls h3{font-size:14px;margin:24px 0 10px}.part-editor-controls .help{margin:10px 0}
+.part-editor-controls .palette-grid{margin:12px 0}.part-editor-controls .palette-grid button{min-height:25px}
+.part-editor-controls details{margin-top:20px}.part-editor-controls summary{cursor:pointer;font-size:14px;padding:10px 0}
+.part-numbers{display:grid;gap:8px;margin:12px 0}.part-number{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted-foreground)}
+.part-number input{width:95px!important;padding:7px 9px!important;color:var(--foreground)}
+.part-editor-preview{min-width:0;min-height:0;overflow:auto}.part-editor-tools,.part-history{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.part-editor-tools{margin-bottom:14px}.part-editor-tools .button{font-size:12px;padding:8px 10px}
+.part-editor-dialog .button.active{border-color:var(--primary);background:#303c24;color:#d9edb8}
+.part-canvas-wrap{display:flex;justify-content:center;background:#0d1118;border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:8px}
+.part-canvas{position:relative;width:min(384px,100%);aspect-ratio:1;user-select:none}
+.part-canvas>.pixel-wrapper{width:100%!important;height:100%!important}.part-canvas.mode-paint canvas{cursor:crosshair}.part-canvas.mode-select canvas{cursor:pointer}.part-canvas.mode-pivot canvas{cursor:grab}
+.part-pivot{position:absolute;transform:translate(-50%,-50%);width:36px;height:36px;border:1px solid #e5efba;border-radius:50%;background:#18221bd9;color:#d8ff8c;display:grid;place-items:center;cursor:grab;touch-action:none;box-shadow:0 0 0 2px #0d1118}
+.part-pivot:focus-visible{outline:3px solid #6fcde8;outline-offset:3px}.part-pivot:active{cursor:grabbing}
+.part-directions .pixel-wrapper{width:min(100%,96px)!important}
+.part-editor-dialog .shared-edit-footer{position:sticky;bottom:-1px;background:var(--background);padding:12px 0 0;z-index:2}
+@media(max-width:760px){.part-editor-layout{grid-template-columns:1fr;overflow:auto}.part-editor-controls{border-right:0;padding-right:0;overflow:visible}.part-editor-preview{grid-row:1;overflow:visible}.part-directions{grid-template-columns:repeat(4,minmax(0,1fr))}.part-editor-tools .button{flex:1;padding:7px;font-size:11px}.part-canvas-wrap{padding:14px}.part-editor-dialog .shared-edit-footer{flex-wrap:wrap}.shared-edit-launch{flex-wrap:wrap}}
 @media(max-width:500px){.shared-comparison{gap:5px}.shared-comparison figure{padding:5px}.shared-comparison figcaption{font-size:10px}.shared-diff-legend{font-size:11px;justify-content:flex-start}}
 .tail-select{margin:14px 0!important;font-size:14px}
 .tail-controls{padding:16px;margin-bottom:24px;border:1px solid #647a45;border-radius:8px;background:#242d21}

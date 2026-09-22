@@ -50,7 +50,7 @@ export function SharedEditDialog({open,onClose,revision,direction,loadBaseMesh,o
  const shapeChanged=JSON.stringify(transforms)!==JSON.stringify(revision.sharedEdits?.parts||{});
  const labels=new Map(loaded?.base.parts?.map((p,i)=>[p.id,partLabel(p,revision,i)]));
  const selectedPreview=useMemo(()=>result&&part&&isolated?renderFrame({...result.mesh,triangles:result.mesh.triangles.filter(t=>t.partId===part)},revision.style,source,revision.size,revision.facing):null,[result,part,isolated,revision,source]);
- function changePart(field:keyof PartTransform,axis:number,value:number){if(busy)return;setTransforms(old=>{const t=clone(Object.hasOwn(old,part)?old[part]:identityTransform());t[field][axis]=value;return {...old,[part]:t};});}
+ function changePart(field:'scale'|'offset',axis:number,value:number){if(busy)return;setTransforms(old=>{const t=clone(Object.hasOwn(old,part)?old[part]:identityTransform());t[field][axis]=value;return {...old,[part]:t};});}
  function choosePart(id:string,change:PartChoice){setChoices(old=>({...old,[id]:{...old[id],...change}}));}
  async function apply(){if(!result)return;setBusy(true);setError('');try{await onApply(result.edits,result);onClose();}catch(e){setError(e instanceof Error?e.message:'保存に失敗しました。編集内容は保持しています');}finally{setBusy(false);}}
  return <Dialog open={open} onOpenChange={v=>{if(!v&&!busy)onClose();}}><DialogContent className="shared-edit-dialog" onPointerDownOutside={e=>e.preventDefault()} onEscapeKeyDown={e=>{if(busy)e.preventDefault();}}><DialogHeader><DialogTitle><Layers size={20}/>手修正を全方向へ反映</DialogTitle><DialogDescription>描いた模様や色を同じ部位へ反映します。変更前後を比べて、新しい候補として保存します。</DialogDescription></DialogHeader>

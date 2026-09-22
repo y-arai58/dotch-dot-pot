@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import {writeFileSync} from 'node:fs';
+import {buildMesh,renderSet,renderFrame,clone,DEFAULT_STYLE,RENDERER_VERSION,type Asset,type Revision,type SurfaceHit} from '../lib/pixel';
+import {sampleModel} from '../lib/sample-models';
+import {emptySharedEdits,identityTransform,applySharedEdits,partCenters} from '../lib/shared-edits';
+import {paintPartStroke,recolorPart,previewPartDesign} from '../lib/part-design';
+import {movePartPivot} from '../lib/part-transform';
+import {exportRevision} from '../lib/export';
+
+const origin=process.env.TEST_ORIGIN||'http://localhost:5173';
+assert.ok(['localhost','127.0.0.1'].includes(new URL(origin).hostname),'ローカル環境専用');
+const login=await fetch(origin+'/signin-with-chatgpt?return_to=/',{redirect:'manual'}),cookie=login.headers.getSetCookie().map(c=>c.split(';')[0]).join('; ');assert.ok(cookie);
+async function call(path:string,data?:unknown,auth=cookie){const response=await fetch(origin+path,{method:data?'POST':'GET',headers:{...(auth?{cookie:auth}:{}),...(data?{'Content-Type':'application/json',Origin:origin}:{})},body:data?JSON.stringify(data):undefined});return {status:response.status,data:await response.json() as any};}
+const projectId=crypto.randomUUID(),assetId=crypto.randomUUID(),style={...clone(DEFAULT_STYLE),id:crypto.randomUUID()},model=sampleModel('travel-chest')!,base=buildMesh(model),frames=renderSet(base,style);
+assert.equal((await call('/api/studio',{action:'project',project:{id:projectId,name:'パーツと支点の保存検証',styles:[style],version:0,updatedAt:''}})).status,200);
+const original:Revision={id:crypto.randomUUID(),createdAt:new Date().toISOString(),rendererVersion:RENDERER_VERSION,style,frames,baseFrames:clone(frames),approved:true,reviewed:true,issues:'',mode:'eight',source:'sample',rigKind:'prop',modelId:model.id,name:model.name,prompt:model.prompt,features:model.features,facing:0,size:1};
+const initial=await call('/api/studio',{action:'asset',asset:{id:assetId,projectId,name:'パーツと支点の検証',revisions:[original],version:0,updatedAt:''}});assert.equal(initial.status,200,JSON.stringify(initial.data));
+const saved=initial.data as Asset,source=clone(original),hits:(SurfaceHit|undefined)[]=[];renderFrame(base,style,'S',1,0,hits);
+const at=hits.findIndex(h=>h&&base.triangles[h.triangle].vertices.every(v=>v[2]>.5));assert.ok(at>=0);
+const part=base.triangles[hits[at]!.triangle].partId!,center=partCenters(base).get(part)!;
+let edits=paintPartStroke(base,source,emptySharedEdits(base),'S',part,[[at%64,Math.floor(at/64)]],20);
+assert.ok(edits.paints.length);edits=recolorPart(base,edits,part,style.palette[30]);
+edits.parts[part]={...identityTransform(),rotation:[0,0,15]};
+edits.parts[part]=movePartPivot(center,edits.parts[part],[center[0]+.2,center[1],center[2]+.1]);
+// A drawing that is not on a shared surface survives only in the candidate.
+source.frames[4].body[0]=19;
+const preview=previewPartDesign(base,source,edits),candidate:Revision={...source,id:crypto.randomUUID(),parentRevisionId:original.id,approved:false,reviewed:false,sharedEdits:edits,frames:preview.frames,baseFrames:preview.baseFrames};
+assert.equal(preview.localOnly,1);
+const invalid=clone(candidate);invalid.sharedEdits!.parts[part].pivot=[6,0,0];
+assert.equal((await call('/api/studio',{action:'asset',asset:{...saved,revisions:[original,invalid]}})).status,400,'支点の範囲違反を拒否');
+assert.equal((await call('/api/studio',{action:'asset',asset:{...saved,revisions:[source,candidate]}})).status,400,'元の版の同時上書きを拒否');
+const next={...saved,revisions:[...saved.revisions,candidate]},result=await call('/api/studio',{action:'asset',asset:next});assert.equal(result.status,200,JSON.stringify(result.data));
+const reloaded=(await call('/api/studio?assetId='+assetId)).data as Asset,restored=reloaded.revisions[1];
+assert.deepEqual(reloaded.revisions[0],saved.revisions[0],'元版の全方向・採用状態・設定を保持');
+assert.deepEqual(restored.sharedEdits,edits,'色・模様・向き・移動後の支点を復元');
+assert.deepEqual(restored.frames,candidate.frames,'共有対象外の描画も保持');
+assert.deepEqual(renderSet(applySharedEdits(base,restored.sharedEdits),style),restored.baseFrames,'再読込後の全方向の画素を再現');
+const exported=JSON.parse(new TextDecoder().decode(exportRevision(restored)['shared-edits.json']));assert.deepEqual(exported.edits,edits);
+assert.equal((await call('/api/studio?assetId='+assetId,undefined,'')).status,401);
+assert.equal((await call('/api/studio',{action:'asset',asset:next})).status,409,'古い保存版との競合を検出');
+writeFileSync('/private/tmp/dotch-part-editor-records.json',JSON.stringify({projectId,assetId,originalId:original.id,candidateId:candidate.id}));
+console.log('Part editor HTTP integration passed: pivot/rotation/paint persistence, exact eight-direction restore, source protection, unshared edits, validation, export, auth and CAS.');
