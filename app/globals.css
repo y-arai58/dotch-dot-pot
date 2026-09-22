@@ -70,3 +70,9 @@
 .tail-controls .button{font-size:13px;white-space:normal}
 .tail-controls .help{font-size:12px}
 .tail-key-note{margin-top:14px;border-top:1px solid #526246}
+
+.motion-generation-notice{margin:0 0 14px;padding:14px 16px;border:1px solid #586847;border-radius:7px;background:#252f24;font-size:14px;line-height:1.65;color:#d9e7cf}
+.motion-generation-notice p{margin:0}
+.motion-generation-notice .check-row{margin-top:10px}
+.animation-dialog .motion-generation-notice .check-row label{font-size:14px}
+.motion-generation-notice ul{list-style:disc;margin:8px 0 0;padding-left:20px;max-height:180px;overflow:auto}
