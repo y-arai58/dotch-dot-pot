@@ -12,7 +12,7 @@ import {ANIMAL_MOTION_VERSION,animalRig,animalClips,bakeAnimal,type AnimalConfig
 import {inspectAnimal} from '../scripts/animal-quality';
 import {exportAnimation} from '../lib/animation-export';
 test('動物と人型は別のモデル契約を使い、登録済みskillだけを選択できる',()=>{
- assert.deepEqual(CREATION_SKILLS.map(s=>[s.id,s.validationFrames]),[['humanoid',344],['animal',376]]);
+ assert.deepEqual(CREATION_SKILLS.map(s=>[s.id,s.validationFrames]),[['humanoid',344],['animal',376],['prop',8]]);
  assert.throws(()=>parseAnimal(humans[0]));assert.throws(()=>parseHumanoid(samples[0]));
  const model=clone(samples[0]);model.parts.push(model.parts[0]);assert.throws(()=>parseAnimal(model),/重複/);
  const request={id:'animal-test',projectId:'project-test',skillId:'animal',name:'キツネ',prompt:'青い首輪',features:[],mode:'eight',style:DEFAULT_STYLE,referenceKeys:[],referenceSides:[]};

@@ -2,7 +2,7 @@ import {cp,mkdir,readFile,access} from 'node:fs/promises';
 import {homedir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-const kind=process.argv.slice(2).find(arg=>!arg.startsWith('--'))||'humanoid';if(!['humanoid','animal'].includes(kind))throw Error('Choose humanoid or animal');
+const kind=process.argv.slice(2).find(arg=>!arg.startsWith('--'))||'humanoid';if(!['humanoid','animal','prop'].includes(kind))throw Error('Choose humanoid, animal or prop');
 const name='dotforge-'+kind;
 const source=fileURLToPath(new URL('../skills/'+name,import.meta.url));
 const target=join(process.env.CODEX_HOME||join(homedir(),'.codex'),'skills',name);

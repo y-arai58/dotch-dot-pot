@@ -1,0 +1,374 @@
+{
+  "id": "travel-chest",
+  "name": "旅の宝箱",
+  "prompt": "旅先の遺跡で見つかる小ぶりな木の宝箱。丸い蓋、左右の真鍮の帯、前面中央の金色の錠前と鍵穴、背面の二つの蝶番。木目の細部は控えめにし、8方向で前後が分かる形。",
+  "features": [
+    "丸い木製の蓋",
+    "左右の真鍮の帯",
+    "前面の金の錠前（−Y）",
+    "背面の二つの蝶番（+Y）",
+    "四つの短い脚"
+  ],
+  "parts": [
+    {
+      "id": "chest-body",
+      "shape": "box",
+      "position": [
+        0,
+        0,
+        0.365
+      ],
+      "size": [
+        1.28,
+        0.82,
+        0.61
+      ],
+      "color": "#81512f"
+    },
+    {
+      "id": "chest-base-frame",
+      "shape": "box",
+      "position": [
+        0,
+        0,
+        0.115
+      ],
+      "size": [
+        1.34,
+        0.88,
+        0.13
+      ],
+      "color": "#573b2a"
+    },
+    {
+      "id": "chest-lid-rim",
+      "shape": "box",
+      "position": [
+        0,
+        0,
+        0.69
+      ],
+      "size": [
+        1.32,
+        0.87,
+        0.115
+      ],
+      "color": "#573b2a"
+    },
+    {
+      "id": "chest-rounded-lid",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        0,
+        0.79
+      ],
+      "size": [
+        1.31,
+        0.875,
+        0.46
+      ],
+      "color": "#a26a39"
+    },
+    {
+      "id": "chest-left-front-panel",
+      "shape": "box",
+      "position": [
+        0.325,
+        -0.42,
+        0.415
+      ],
+      "size": [
+        0.57,
+        0.035,
+        0.4
+      ],
+      "color": "#9a6338"
+    },
+    {
+      "id": "chest-right-front-panel",
+      "shape": "box",
+      "position": [
+        -0.325,
+        -0.42,
+        0.415
+      ],
+      "size": [
+        0.57,
+        0.035,
+        0.4
+      ],
+      "color": "#966036"
+    },
+    {
+      "id": "chest-left-back-panel",
+      "shape": "box",
+      "position": [
+        0.325,
+        0.42,
+        0.415
+      ],
+      "size": [
+        0.57,
+        0.035,
+        0.4
+      ],
+      "color": "#8c5932"
+    },
+    {
+      "id": "chest-right-back-panel",
+      "shape": "box",
+      "position": [
+        -0.325,
+        0.42,
+        0.415
+      ],
+      "size": [
+        0.57,
+        0.035,
+        0.4
+      ],
+      "color": "#885630"
+    },
+    {
+      "id": "chest-front-plank-seam",
+      "shape": "box",
+      "position": [
+        0,
+        -0.442,
+        0.385
+      ],
+      "size": [
+        1.18,
+        0.013,
+        0.025
+      ],
+      "color": "#67402b"
+    },
+    {
+      "id": "chest-back-plank-seam",
+      "shape": "box",
+      "position": [
+        0,
+        0.442,
+        0.385
+      ],
+      "size": [
+        1.18,
+        0.013,
+        0.025
+      ],
+      "color": "#67402b"
+    },
+    {
+      "id": "chest-left-metal-band",
+      "shape": "box",
+      "position": [
+        0.445,
+        0,
+        0.385
+      ],
+      "size": [
+        0.105,
+        0.91,
+        0.57
+      ],
+      "color": "#a98c51"
+    },
+    {
+      "id": "chest-right-metal-band",
+      "shape": "box",
+      "position": [
+        -0.445,
+        0,
+        0.385
+      ],
+      "size": [
+        0.105,
+        0.91,
+        0.57
+      ],
+      "color": "#a98c51"
+    },
+    {
+      "id": "chest-left-lid-band",
+      "shape": "ellipsoid",
+      "position": [
+        0.445,
+        0,
+        0.795
+      ],
+      "size": [
+        0.12,
+        0.915,
+        0.48
+      ],
+      "color": "#c2a05b"
+    },
+    {
+      "id": "chest-right-lid-band",
+      "shape": "ellipsoid",
+      "position": [
+        -0.445,
+        0,
+        0.795
+      ],
+      "size": [
+        0.12,
+        0.915,
+        0.48
+      ],
+      "color": "#c2a05b"
+    },
+    {
+      "id": "chest-front-clasp",
+      "shape": "box",
+      "position": [
+        0,
+        -0.457,
+        0.715
+      ],
+      "size": [
+        0.135,
+        0.05,
+        0.3
+      ],
+      "color": "#c6a45f"
+    },
+    {
+      "id": "chest-front-lock",
+      "shape": "box",
+      "position": [
+        0,
+        -0.491,
+        0.555
+      ],
+      "size": [
+        0.26,
+        0.105,
+        0.25
+      ],
+      "color": "#debc67"
+    },
+    {
+      "id": "chest-lock-keyhole-round",
+      "shape": "ellipsoid",
+      "position": [
+        0,
+        -0.549,
+        0.587
+      ],
+      "size": [
+        0.066,
+        0.015,
+        0.066
+      ],
+      "color": "#423b30"
+    },
+    {
+      "id": "chest-lock-keyhole-stem",
+      "shape": "box",
+      "position": [
+        0,
+        -0.55,
+        0.54
+      ],
+      "size": [
+        0.035,
+        0.017,
+        0.065
+      ],
+      "color": "#423b30"
+    },
+    {
+      "id": "chest-left-back-hinge",
+      "shape": "box",
+      "position": [
+        0.34,
+        0.465,
+        0.68
+      ],
+      "size": [
+        0.205,
+        0.095,
+        0.2
+      ],
+      "color": "#bda05f"
+    },
+    {
+      "id": "chest-right-back-hinge",
+      "shape": "box",
+      "position": [
+        -0.34,
+        0.465,
+        0.68
+      ],
+      "size": [
+        0.205,
+        0.095,
+        0.2
+      ],
+      "color": "#bda05f"
+    },
+    {
+      "id": "chest-left-front-foot",
+      "shape": "box",
+      "position": [
+        0.515,
+        -0.3,
+        0.07
+      ],
+      "size": [
+        0.19,
+        0.19,
+        0.14
+      ],
+      "color": "#4d392b"
+    },
+    {
+      "id": "chest-right-front-foot",
+      "shape": "box",
+      "position": [
+        -0.515,
+        -0.3,
+        0.07
+      ],
+      "size": [
+        0.19,
+        0.19,
+        0.14
+      ],
+      "color": "#4d392b"
+    },
+    {
+      "id": "chest-left-back-foot",
+      "shape": "box",
+      "position": [
+        0.515,
+        0.3,
+        0.07
+      ],
+      "size": [
+        0.19,
+        0.19,
+        0.14
+      ],
+      "color": "#4d392b"
+    },
+    {
+      "id": "chest-right-back-foot",
+      "shape": "box",
+      "position": [
+        -0.515,
+        0.3,
+        0.07
+      ],
+      "size": [
+        0.19,
+        0.19,
+        0.14
+      ],
+      "color": "#4d392b"
+    }
+  ]
+}

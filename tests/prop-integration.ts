@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import chair from '../skills/dotforge-prop/references/chair.json';
+import humanoids from '../lib/animation-samples.json';
+import {buildMesh,renderSet,DEFAULT_STYLE,clone,RENDERER_VERSION} from '../lib/pixel';
+import {parseProp,PROP_VERSION} from '../lib/prop-contracts';
+import {propArtifact} from '../scripts/prop-quality';
+import {MOTION_VERSION,rigFromModel,defaultClips} from '../lib/animation';
+import {parseHumanoid,type PropArtifact} from '../lib/generation';
+const origin=process.env.TEST_ORIGIN||'http://localhost:5173';
+assert.ok(['localhost','127.0.0.1'].includes(new URL(origin).hostname),'検証はローカル環境だけで実行');
+const login=await fetch(origin+'/signin-with-chatgpt?return_to=/',{redirect:'manual'});
+const cookie=login.headers.getSetCookie().map(v=>v.split(';')[0]).join('; ');assert.ok(cookie);
+async function call(path:string,data?:unknown,auth=cookie){const r=await fetch(origin+path,{method:data?'POST':'GET',headers:{...(auth?{cookie:auth}:{}),...(data?{'Content-Type':'application/json',Origin:origin}:{})},body:data?JSON.stringify(data):undefined});return {status:r.status,data:await r.json() as any};}
+const projectId=crypto.randomUUID(),assetId=crypto.randomUUID(),revisionId=crypto.randomUUID(),jobId=crypto.randomUUID(),style={...clone(DEFAULT_STYLE),id:crypto.randomUUID()};
+const created=await call('/api/studio',{action:'project',project:{id:projectId,name:'物体skill統合検証',styles:[style],version:0,updatedAt:''}});assert.equal(created.status,200,JSON.stringify(created.data));
+const artifact:PropArtifact=process.env.PROP_ARTIFACT_PATH?JSON.parse(readFileSync(process.env.PROP_ARTIFACT_PATH,'utf8')):propArtifact(parseProp(chair),{renderer:RENDERER_VERSION,motion:PROP_VERSION,frames:8,issues:[]},'HTTP fixture persistence test; this is not an AI review.');
+const model=parseProp(artifact.model),request={id:jobId,projectId,skillId:'prop',name:model.name,prompt:model.prompt,features:model.features,mode:'eight',style,referenceKeys:[],referenceSides:[]};
+assert.equal((await call('/api/generate',request)).status,200);assert.equal((await call('/api/generate',request)).status,200);
+assert.equal((await call('/api/generate',{action:'complete',id:jobId,artifact:{...artifact,kind:'rigged-humanoid-v1'}})).status,400);
+assert.equal((await call('/api/generate',{action:'complete',id:jobId,artifact:{...artifact,validation:{...artifact.validation,frames:344}}})).status,400);
+const sunk=clone(artifact);sunk.model.parts[0].position[2]=-1;
+assert.equal((await call('/api/generate',{action:'complete',id:jobId,artifact:sunk})).status,400,'合格レポートの申告に関係なく地面貫通を再検証');
+const outside=clone(artifact);outside.model.parts[0].position[0]=5;
+assert.equal((await call('/api/generate',{action:'complete',id:jobId,artifact:outside})).status,400,'枠外をサーバーで再検証');
+const finished=await call('/api/generate',{action:'complete',id:jobId,artifact});assert.equal(finished.status,200,JSON.stringify(finished.data));assert.equal(finished.data.state,'ready');
+assert.equal((await call('/api/generate',{action:'complete',id:jobId,artifact})).data.modelFile,finished.data.modelFile);
+assert.deepEqual((await call('/api/files?id='+finished.data.modelFile)).data.model,model);assert.equal((await call('/api/files?id='+finished.data.modelFile,undefined,'')).status,401);
+const frames=renderSet(buildMesh(model),style),revision={id:revisionId,rendererVersion:RENDERER_VERSION,createdAt:new Date().toISOString(),style,frames,baseFrames:clone(frames),approved:false,reviewed:false,issues:'',mode:'eight',source:'skill',rigKind:'prop',modelId:model.id,modelKey:finished.data.modelFile,name:model.name,prompt:model.prompt,features:model.features,facing:0,size:1};
+const saved=await call('/api/studio',{action:'asset',asset:{id:assetId,projectId,name:model.name,revisions:[revision],version:0,updatedAt:''}});assert.equal(saved.status,200,JSON.stringify(saved.data));
+const restored=await call('/api/studio?assetId='+assetId);assert.equal(restored.data.revisions[0].rigKind,'prop');assert.deepEqual(restored.data.revisions[0].frames,frames);
+const config={version:MOTION_VERSION,rig:rigFromModel(parseHumanoid(humanoids[0]),'skill'),clips:defaultClips(),scale:1,facing:0,style,mode:'eight'};
+const rejected=await call('/api/animations',{id:crypto.randomUUID(),assetId,sourceRevisionId:revisionId,name:'誤った人型動作',config,baked:[],reviewed:false,version:0,updatedAt:''});assert.equal(rejected.status,400);assert.match(rejected.data.error,/物体用skill/);
+// Leave the ready job in this local-only project for the UI candidate-import check.
+writeFileSync('/private/tmp/dotch-prop-test-records.json',JSON.stringify({projectId,assetId,jobId,fileId:finished.data.modelFile}));
+console.log('Prop HTTP integration passed: routing, authoritative validation, idempotency, authenticated storage, pixel restore, and creature-animation rejection.');

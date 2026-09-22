@@ -5,6 +5,7 @@ import {RENDERER_VERSION} from '@/lib/pixel';
 import {MOTION_VERSION,type RiggedModel} from '@/lib/animation';
 import {ANIMAL_MOTION_VERSION,type AnimalModel} from '@/lib/animal-animation';
 import {parseAnimal} from '@/lib/animal-contracts';
+import {parseProp,propModelIssues,PROP_VERSION,type PropModel} from '@/lib/prop-contracts';
 export const dynamic='force-dynamic';
 type Job={id:string;owner:string;project_id:string;request:string;state:string;model_file:string|null;progress:number;error:string|null;dismissed_at:string|null;created_at:string};
 const publicJob=(j:Job)=>({id:j.id,state:j.state,modelFile:j.model_file,progress:j.progress,error:j.error,dismissedAt:j.dismissed_at,request:JSON.parse(j.request),createdAt:j.created_at});
@@ -22,9 +23,9 @@ export async function POST(request:Request){try{
   if(input.action==='complete'){
    if(['ready','consumed'].includes(job.state))return Response.json(publicJob(job));
    if(!['queued','running'].includes(job.state))throw new HttpError(409,'この依頼は終了しています');
-   const req=generationRequestSchema.parse(JSON.parse(job.request)),entry=CREATION_SKILLS.find(s=>s.id===req.skillId)!,motionVersion=req.skillId==='animal'?ANIMAL_MOTION_VERSION:MOTION_VERSION;let model:RiggedModel|AnimalModel;try{model=req.skillId==='animal'?parseAnimal(input.artifact?.model):parseHumanoid(input.artifact?.model);}catch{throw new HttpError(400,'選択したskillの骨格・パーツを確認してください');}const issues=staticModelIssues(model,req.style),validation=input.artifact?.validation;
+   const req=generationRequestSchema.parse(JSON.parse(job.request)),entry=CREATION_SKILLS.find(s=>s.id===req.skillId)!,motionVersion=req.skillId==='prop'?PROP_VERSION:req.skillId==='animal'?ANIMAL_MOTION_VERSION:MOTION_VERSION;let model:RiggedModel|AnimalModel|PropModel;try{model=req.skillId==='prop'?parseProp(input.artifact?.model):req.skillId==='animal'?parseAnimal(input.artifact?.model):parseHumanoid(input.artifact?.model);}catch{throw new HttpError(400,'選択したskillの骨格・パーツを確認してください');}const issues=req.skillId==='prop'?propModelIssues(model,req.style):staticModelIssues(model,req.style),validation=input.artifact?.validation;
    if(issues.length||input.artifact?.kind!==entry.artifactKind||input.artifact.skillVersion!=='1.0.0'||!validation||validation.renderer!==RENDERER_VERSION||validation.motion!==motionVersion||validation.frames!==entry.validationFrames||!Array.isArray(validation.issues)||validation.issues.length||typeof input.artifact.visualReview!=='string'||!input.artifact.visualReview.trim())throw new HttpError(400,'選択したskillで検証済みのモデルが必要です');
-   const motionIssues=req.skillId==='animal'?await animalMotionModelIssues(model as AnimalModel,req.style):await motionModelIssues(model as RiggedModel,req.style);if(motionIssues.length)throw new HttpError(400,'基本動作の検証に失敗しました。'+motionIssues[0]);
+   const motionIssues=req.skillId==='prop'?[]:req.skillId==='animal'?await animalMotionModelIssues(model as AnimalModel,req.style):await motionModelIssues(model as RiggedModel,req.style);if(motionIssues.length)throw new HttpError(400,'基本動作の検証に失敗しました。'+motionIssues[0]);
    const artifact={kind:entry.artifactKind,skillVersion:entry.version,model,validation:{renderer:RENDERER_VERSION,motion:motionVersion,frames:entry.validationFrames,issues:[]},visualReview:input.artifact.visualReview.slice(0,3000)};
    const fileId=crypto.randomUUID(),key=`${user}/files/${fileId}`,bytes=JSON.stringify(artifact);
    await bucket.put(key,bytes,{httpMetadata:{contentType:'application/json'}});

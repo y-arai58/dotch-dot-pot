@@ -17,6 +17,7 @@ function Axis({label,value,min,max,step,onChange,disabled}:{label:string;value:n
  return <div className="motion-range"><label>{label}<output>{Math.round(value*100)/100}</output></label><Slider disabled={disabled} aria-label={label} value={[value]} min={min} max={max} step={step} onValueChange={v=>onChange(v[0])}/></div>;
 }
 export function SharedEditDialog({open,onClose,revision,direction,loadBaseMesh,onApply}:{open:boolean;onClose:()=>void;revision:Revision;direction:Direction;loadBaseMesh:(r:Revision)=>Promise<Mesh>;onApply:(edits:SharedEdits,preview:Preview)=>Promise<void>}){
+ const staticProp=revision.rigKind==='prop'||['travel-chest','wooden-barrel'].includes(revision.modelId);
  const [loaded,setLoaded]=useState<Loaded|null>(null),[source,setSource]=useState(direction),[method,setMethod]=useState<SharedMethod>('surface');
  const [transforms,setTransforms]=useState<SharedEdits['parts']>({}),[choices,setChoices]=useState<Record<string,PartChoice>>({});
  const [comparison,setComparison]=useState(direction),[preserveSource,setPreserveSource]=useState(true);
@@ -70,10 +71,10 @@ export function SharedEditDialog({open,onClose,revision,direction,loadBaseMesh,o
  {p.hasMultipleColors&&<p className="help">複数の変更色から、最も多く塗った色を提案しています。描いた色をすべて反映する場合は「描いた模様をそのまま反映」を選んでください。</p>}</>}
  </div>;}):<p className="help">この方向に、色替えに使える手修正がありません。</p>}</div>}
  <p className="help">{result?.transferred.length||0}画素をもとに反映します。陰影はプロジェクトの光源に合わせます。</p>
- {result&&result.sourceOnly>0&&<p className="notice" role="status">輪郭・消しゴム・影など{result.sourceOnly}画素は修正元の静止画に保持します。この部分は動作には引き継がれません。</p>}
- {result&&result.localOnly>0&&<p className="notice" role="status">今回共有しない手修正は、描いた方向の静止画に保持します。動作への反映には、その表面での修正が必要です。</p>}
+ {result&&result.sourceOnly>0&&<p className="notice" role="status">輪郭・消しゴム・影など{result.sourceOnly}画素は修正元の静止画に保持します。{!staticProp&&'この部分は動作には引き継がれません。'}</p>}
+ {result&&result.localOnly>0&&<p className="notice" role="status">今回共有しない手修正は、描いた方向の静止画に保持します。{!staticProp&&'動作への反映には、その表面での修正が必要です。'}</p>}
  <h3>パーツの形を調整</h3><Select disabled={busy} value={part||'_none'} onValueChange={setPart}><SelectTrigger aria-label="修正するパーツ"><SelectValue/></SelectTrigger><SelectContent>{loaded.base.parts?.map(p=><SelectItem key={p.id} value={p.id}>{labels.get(p.id)}</SelectItem>)}</SelectContent></Select>
- {part&&<><label className="shared-isolate"><input type="checkbox" disabled={busy} checked={isolated} onChange={e=>setIsolated(e.target.checked)}/>選んだパーツだけを確認</label>{isolated&&selectedPreview&&<PixelCanvas pixels={selectedPreview.body} palette={revision.style.palette} scale={3} label="選択パーツの形状"/>}<p className="help">大きさは元パーツに対する倍率です。形を変えた後は接地と関節のつながりも確認してください。</p>
+ {part&&<><label className="shared-isolate"><input type="checkbox" disabled={busy} checked={isolated} onChange={e=>setIsolated(e.target.checked)}/>選んだパーツだけを確認</label>{isolated&&selectedPreview&&<PixelCanvas pixels={selectedPreview.body} palette={revision.style.palette} scale={3} label="選択パーツの形状"/>}<p className="help">大きさは元パーツに対する倍率です。形を変えた後は接地とパーツのつながりも確認してください。</p>
  {['横の大きさ','奥行きの大きさ','高さ'].map((label,i)=><Axis key={label} disabled={busy} label={label} value={transform.scale[i]} min={.1} max={3} step={.05} onChange={v=>changePart('scale',i,v)}/>)}
  {['左右の位置','前後の位置','上下の位置'].map((label,i)=><Axis key={label} disabled={busy} label={label} value={transform.offset[i]} min={-1} max={1} step={.025} onChange={v=>changePart('offset',i,v)}/>)}
  <button className="text-button" disabled={busy||!Object.hasOwn(transforms,part)} onClick={()=>setTransforms(old=>{const next={...old};delete next[part];return next;})}><RotateCcw size={14}/>このパーツを元の形に戻す</button></>}
@@ -87,7 +88,7 @@ export function SharedEditDialog({open,onClose,revision,direction,loadBaseMesh,o
  <div className="panel-heading"><span>確認する方向を選択</span><small>反映後の{revision.frames.length}方向</small></div><div className="shared-direction-grid">{result?.frames.map(f=>{const count=changes.find(c=>c.direction===f.direction)?.count||0;return <button type="button" key={f.direction} className={comparison===f.direction?'selected':''} aria-pressed={comparison===f.direction} aria-label={`${f.direction}方向を比較`} onClick={()=>setComparison(f.direction)}><PixelCanvas pixels={composite(f)} palette={revision.style.palette} scale={2} label={`共通修正後 ${f.direction}`}/><span>{f.direction}{f.direction===source?' · 修正元':''}<strong>{count?`${count}画素変更`:f.direction===source&&result.preserveSource?'手描きと一致':'変化なし'}</strong></span></button>;})}</div>
  {result&&result.transferred.length>0&&!changes.some(c=>c.direction!==source&&c.count>0)&&<p className="notice" role="status">他の方向では変化が見えていません。{method==='surface'?'描いた面が隠れている場合や、模様が1画素より小さく映る場合があります。裏側の地色も変える場合は「指定した色だけ変更」を選んでください。':'選んだ部位や色が他の方向で見えるか、差分で確認してください。'}</p>}
  {!!issues.length&&<div className="notice" role="status">候補の確認事項：{issues.slice(0,4).join(' / ')}</div>}
- <p className="help">元の版は最後に保存した状態で残ります。未保存の描き込みは新候補だけに引き継ぎます。表面に反映された模様・色は、新候補の「アニメーション」で「全動作・全方向を生成」すると動作へ引き継がれます。</p>
+ <p className="help">元の版は最後に保存した状態で残ります。未保存の描き込みは新候補だけに引き継ぎます。{!staticProp&&'表面に反映された模様・色は、新候補の「アニメーション」で「全動作・全方向を生成」すると動作へ引き継がれます。'}</p>
  </section></div>}
  <footer className="shared-edit-footer"><button className="button" disabled={busy} onClick={onClose}>戻る</button><button className="button primary" disabled={busy||!result||(!result.transferred.length&&!shapeChanged)} onClick={()=>void apply()}>{busy?<Loader2 size={16} className="spin"/>:<Check size={16}/>}全方向の新候補を保存</button></footer>
  </DialogContent></Dialog>;

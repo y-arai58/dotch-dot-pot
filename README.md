@@ -13,7 +13,7 @@
 ## 機能
 
 - プロジェクト単位のパレット、世界固定の光源、俯角、輪郭、落ち影設定
-- 人型・小物4種と動物2種の共通3Dサンプル、GLB取込み、Codex app serverによる人型・四足動物skill生成
+- 人型・小物4種と動物2種の共通3Dサンプル、GLB取込み、Codex app serverによる人型・四足動物・物体skill生成
 - 8方向の比較、方向別の再描画、鉛筆・消しゴム・塗りつぶし・スポイト・矩形の画素編集
 - 候補と採用版の管理、採用版の上書き防止、保存時の競合検出
 - 64×64 PNG、512×64の8方向シート、メタデータをZIP出力
@@ -63,6 +63,7 @@ Sites経由のビルド・配信はSitesスキルの手順に従います。実�
 ```sh
 npm run skill:install
 npm run skill:install -- animal
+npm run skill:install -- prop
 codex login
 npm run codex:service -- install
 ```
@@ -81,11 +82,11 @@ bridgeはこの端末の127.0.0.1:43117で動作します。macOSではインス
 
 app-serverはread-only / approval never、shell・Web・Apps・plugins・browser・画像生成・subagents・hooksを無効化し、設定済みMCPを個別に停止します。利用者のCodexプロファイルとログインを使うローカルアプリであり、別OSユーザー向けの隔離基盤ではありません。CLI互換性のため子プロセスに限りreasoning effortをhighへ設定します。
 
-明示skill入力 → 16関節モデルJSON → 344枚の技術検証 → 実際のPNGをCodexへ返す画像レビュー → 必要なら最大2回修正 → 候補受取、の順です。静止8方向と、待機8・歩行12・しゃがみ10・ジャンプ12コマの全8方向を検査します。採用は利用者が行います。
+人型では、明示skill入力 → 16関節モデルJSON → 344枚の技術検証 → 実際のPNGをCodexへ返す画像レビュー → 必要なら最大2回修正 → 候補受取、の順です。静止8方向と、待機8・歩行12・しゃがみ10・ジャンプ12コマの全8方向を検査します。採用は利用者が行います。
 
 受取側のWorkerでも同じモデル・保存済みスタイルから全動作を再描画し、ブラウザ申告の合格レポートだけでは受理しません。画像レビュー記述自体は暗号学的な証明ではなく、最終的な見た目の採用判断は利用者に残します。
 
-説明・重要特徴・参照画像（最大3枚、各方向を指定）を同時に渡します。結果は立体形状、全パーツの追従先、16関節、動作補正を持つJSONです。候補追加後は8方向の再描画、パレット・光源変更、アニメーション編集、PNG/JSON出力を使えます。
+説明・重要特徴・参照画像（最大3枚、各方向を指定）を同時に渡します。人型の結果は立体形状、全パーツの追従先、16関節、動作補正を持つJSONです。候補追加後は8方向の再描画、パレット・光源変更、アニメーション編集、PNG/JSON出力を使えます。
 
 画面を閉じてもbridgeが動いていれば作成は続きます。再接続後は同じ依頼IDで結果を復元し、重複実行しません。停止はturn/interruptへ伝え、遅れて届いた成果は採用しません。bridge再起動時の未完了依頼は失敗とし、自動再送しません。作業データは `~/.dotforge/jobs` に残します。任意の保存先は `DOTFORGE_HOME` で設定できます。
 
@@ -95,7 +96,7 @@ app-serverはread-only / approval never、shell・Web・Apps・plugins・browser
 
 単独のskill検証は `node skills/dotforge-humanoid/scripts/check.mjs --studio . --model path/to/model.json --out path/to/review` で実行します。実生成を伴う確認は通常テストに含めず、明示的に `DOTFORGE_LIVE_TEST=1 node --import tsx scripts/smoke-codex.ts` を実行した場合だけCodexの利用枠を使います。
 
-人型と動物は `CREATION_SKILLS` から専用の入出力schema・骨格・検証器へ振り分けます。未登録skillは両側で拒否します。
+人型・動物・物体は `CREATION_SKILLS` から専用の入出力schema・検証器へ振り分けます。骨格は人型と動物だけで使います。未登録skillは両側で拒否します。
 
 ## 実装・検証の状況
 
@@ -169,6 +170,26 @@ TEST_ORIGIN=http://localhost:5173 npx tsx tests/animal-integration.ts
 実生成のスモーク検証だけがCodexの利用枠を使用します。
 
 動物skillの実生成では「森の案内猫」を49パーツで作成し、376枚の技術検証と画像レビューを通過しました（2026-09-12）。青い首輪、左前足の白い模様、尾の縞を持つ新規モデルです。品種ごとの大規模な品質評価は今後の検証事項です。
+
+## 物体・家具・小物skill
+
+「アセットを追加」→ 作成skill「物体・家具・小物」で、名前・説明・保持する特徴を指定して依頼します。`dotforge-prop` は宝箱・机・椅子・木樽・照明などの非生物を対象とし、人型・動物の骨格を付けません。天板・脚・背もたれ・蓋・留め具などを名前付きの共通パーツで管理します。
+
+同じ形状からプロジェクトのパレット・俯角・光源で64×64を直接描画し、正面のみ／8方向で出力できます。正面のみを選んだ場合も、品質確認では8方向を検査します。物体用は静止画専用で、宝箱の開閉・引き出しの可動などは今後の拡張です。生き物のアニメーション編集は表示しません。
+
+基準は宝箱と青いクッション付きの椅子。厳密なパーツ契約と8方向の寸法・固定パレット・余白・地面貫通を検査し、ネイティブ画像と最近傍拡大画像をCodexへ返して画像レビューします。最大2回の修正後も不合格なら失敗として返します。サーバーでも再描画して検証します。候補追加後の全方向再描画、パーツの色・模様・形状の共有編集、PNG/シート/JSON書出しは既存の機能を使います。
+
+```sh
+npm run skill:install -- prop
+# 更新時
+npm run skill:install -- prop --update
+npm run codex:service -- install
+node skills/dotforge-prop/scripts/check.mjs --studio . --model skills/dotforge-prop/references/chair.json --out /private/tmp/dotch-prop-chair-review
+DOTFORGE_LIVE_TEST=1 DOTFORGE_SMOKE_SKILL=prop node --import tsx scripts/smoke-codex.ts
+PROP_ARTIFACT_PATH=/private/tmp/dotch-prop-live/artifact.json TEST_ORIGIN=http://localhost:5173 node --import tsx tests/prop-integration.ts
+```
+
+実生成で、正面左の引き出し・真鍮のつまみ・右奥の青い本を持つ木製机を作成し、19パーツ・8方向の技術検査と画像レビューに合格しました。同じ成果のHTTP保存、認証、重複完了の再送、全画素復元、物体への人型アニメーション保存の拒否を検証しました。自動検査は部品の接続や意匠の正しさを保証しないため、実画像を確認して候補を採用してください。
 
 ## 手修正の全方向反映
 

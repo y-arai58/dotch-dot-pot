@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dotch Dot Pot 物体・家具・小物"
+  short_description: "宝箱・机・椅子などを同じ立体から作る、パーツ編集可能な64×64の8方向ドット絵"
+  default_prompt: "$dotforge-prop を使い、指定した物体の特徴とプロジェクトの配色・光源を保つ8方向のドット絵を作成してください。"
