@@ -1,4 +1,5 @@
-import Studio from './studio';
-import {getChatGPTUser,chatGPTSignInPath} from './chatgpt-auth';
+import {redirect} from 'next/navigation';
+import {getChatGPTUser} from './chatgpt-auth';
+import {Landing} from '@/components/project/landing';
 export const dynamic='force-dynamic';
-export default async function Home(){const user=await getChatGPTUser();return <Studio signedIn={!!user} signInUrl={chatGPTSignInPath('/')} />;}
+export default async function Home(){if(await getChatGPTUser())redirect('/projects');return <Landing/>;}

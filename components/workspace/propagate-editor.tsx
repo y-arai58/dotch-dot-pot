@@ -1,7 +1,6 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
 import {Loader2,RotateCcw,Check,Layers} from 'lucide-react';
-import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from '@/components/ui/select';
 import {Slider} from '@/components/ui/slider';
 import {PixelCanvas} from '@/components/pixel-canvas';
@@ -16,7 +15,8 @@ type Loaded={base:Mesh;current:Mesh;baseline:Frame[]};
 function Axis({label,value,min,max,step,onChange,disabled}:{label:string;value:number;min:number;max:number;step:number;onChange:(n:number)=>void;disabled:boolean}){
  return <div className="motion-range"><label>{label}<output>{Math.round(value*100)/100}</output></label><Slider disabled={disabled} aria-label={label} value={[value]} min={min} max={max} step={step} onValueChange={v=>onChange(v[0])}/></div>;
 }
-export function SharedEditDialog({open,onClose,revision,direction,loadBaseMesh,onApply}:{open:boolean;onClose:()=>void;revision:Revision;direction:Direction;loadBaseMesh:(r:Revision)=>Promise<Mesh>;onApply:(edits:SharedEdits,preview:Preview)=>Promise<void>}){
+/** 手修正を全方向へ反映: shown as a sub-screen of the ドット tab. */
+export function PropagateEditor({open,locked,onDone,revision,direction,loadBaseMesh,onApply}:{open:boolean;locked:boolean;onDone:()=>void;revision:Revision;direction:Direction;loadBaseMesh:(r:Revision)=>Promise<Mesh>;onApply:(edits:SharedEdits,preview:Preview)=>Promise<void>}){
  const staticProp=revision.rigKind==='prop'||['travel-chest','wooden-barrel'].includes(revision.modelId);
  const [loaded,setLoaded]=useState<Loaded|null>(null),[source,setSource]=useState(direction),[method,setMethod]=useState<SharedMethod>('surface');
  const [transforms,setTransforms]=useState<SharedEdits['parts']>({}),[choices,setChoices]=useState<Record<string,PartChoice>>({});
@@ -52,8 +52,8 @@ export function SharedEditDialog({open,onClose,revision,direction,loadBaseMesh,o
  const selectedPreview=useMemo(()=>result&&part&&isolated?renderFrame({...result.mesh,triangles:result.mesh.triangles.filter(t=>t.partId===part)},revision.style,source,revision.size,revision.facing):null,[result,part,isolated,revision,source]);
  function changePart(field:'scale'|'offset',axis:number,value:number){if(busy)return;setTransforms(old=>{const t=clone(Object.hasOwn(old,part)?old[part]:identityTransform());t[field][axis]=value;return {...old,[part]:t};});}
  function choosePart(id:string,change:PartChoice){setChoices(old=>({...old,[id]:{...old[id],...change}}));}
- async function apply(){if(!result)return;setBusy(true);setError('');try{await onApply(result.edits,result);onClose();}catch(e){setError(e instanceof Error?e.message:'保存に失敗しました。編集内容は保持しています');}finally{setBusy(false);}}
- return <Dialog open={open} onOpenChange={v=>{if(!v&&!busy)onClose();}}><DialogContent className="shared-edit-dialog" onPointerDownOutside={e=>e.preventDefault()} onEscapeKeyDown={e=>{if(busy)e.preventDefault();}}><DialogHeader><DialogTitle><Layers size={20}/>手修正を全方向へ反映</DialogTitle><DialogDescription>描いた模様や色を同じ部位へ反映します。変更前後を比べて、新しい候補として保存します。</DialogDescription></DialogHeader>
+ async function apply(){if(!result)return;setBusy(true);setError('');try{await onApply(result.edits,result);onDone();}catch(e){setError(e instanceof Error?e.message:'保存に失敗しました。編集内容は保持しています');}finally{setBusy(false);}}
+ return <section className="shared-edit-page"><header className="tab-heading"><div><h2><Layers size={18}/>手修正を全方向へ反映</h2><p>描いた模様や色を同じ部位へ反映します。変更前後を比べて、新しい候補として保存します。</p></div></header>
  {(error||preview?.error)&&<p className="motion-error" role="alert">{error||preview?.error}</p>}
  {!loaded?<p className="motion-loading">{busy?<><Loader2 className="spin"/>修正箇所とパーツを調べています</>:'元の画素編集は保持されています。'}</p>:<div className="shared-edit-layout"><section className="shared-edit-controls">
  <h3>修正元の方向</h3><Select disabled={busy} value={source} onValueChange={v=>{setSource(v as Direction);setComparison(v as Direction);setChoices({});}}><SelectTrigger aria-label="修正元の方向"><SelectValue/></SelectTrigger><SelectContent>{revision.frames.map(f=><SelectItem key={f.direction} value={f.direction}>{f.direction} · 手修正{frameDifference(f,loaded.baseline.find(b=>b.direction===f.direction)!).count}画素</SelectItem>)}</SelectContent></Select>
@@ -73,11 +73,7 @@ export function SharedEditDialog({open,onClose,revision,direction,loadBaseMesh,o
  <p className="help">{result?.transferred.length||0}画素をもとに反映します。陰影はプロジェクトの光源に合わせます。</p>
  {result&&result.sourceOnly>0&&<p className="notice" role="status">輪郭・消しゴム・影など{result.sourceOnly}画素は修正元の静止画に保持します。{!staticProp&&'この部分は動作には引き継がれません。'}</p>}
  {result&&result.localOnly>0&&<p className="notice" role="status">今回共有しない手修正は、描いた方向の静止画に保持します。{!staticProp&&'動作への反映には、その表面での修正が必要です。'}</p>}
- <h3>パーツの形を調整</h3><Select disabled={busy} value={part||'_none'} onValueChange={setPart}><SelectTrigger aria-label="修正するパーツ"><SelectValue/></SelectTrigger><SelectContent>{loaded.base.parts?.map(p=><SelectItem key={p.id} value={p.id}>{labels.get(p.id)}</SelectItem>)}</SelectContent></Select>
- {part&&<><label className="shared-isolate"><input type="checkbox" disabled={busy} checked={isolated} onChange={e=>setIsolated(e.target.checked)}/>選んだパーツだけを確認</label>{isolated&&selectedPreview&&<PixelCanvas pixels={selectedPreview.body} palette={revision.style.palette} scale={3} label="選択パーツの形状"/>}<p className="help">大きさは元パーツに対する倍率です。形を変えた後は接地とパーツのつながりも確認してください。</p>
- {['横の大きさ','奥行きの大きさ','高さ'].map((label,i)=><Axis key={label} disabled={busy} label={label} value={transform.scale[i]} min={.1} max={3} step={.05} onChange={v=>changePart('scale',i,v)}/>)}
- {['左右の位置','前後の位置','上下の位置'].map((label,i)=><Axis key={label} disabled={busy} label={label} value={transform.offset[i]} min={-1} max={1} step={.025} onChange={v=>changePart('offset',i,v)}/>)}
- <button className="text-button" disabled={busy||!Object.hasOwn(transforms,part)} onClick={()=>setTransforms(old=>{const next={...old};delete next[part];return next;})}><RotateCcw size={14}/>このパーツを元の形に戻す</button></>}
+ <p className="help">パーツの形・向き・大きさは「パーツ」タブで調整します。</p>
  </section><section className="shared-edit-preview">
  <div className="panel-heading"><span>{comparison}方向の変更を比較</span><small>各64 × 64 px</small></div>
  {before&&after&&difference&&<><div className="shared-comparison">
@@ -90,6 +86,6 @@ export function SharedEditDialog({open,onClose,revision,direction,loadBaseMesh,o
  {!!issues.length&&<div className="notice" role="status">候補の確認事項：{issues.slice(0,4).join(' / ')}</div>}
  <p className="help">元の版は最後に保存した状態で残ります。未保存の描き込みは新候補だけに引き継ぎます。{!staticProp&&'表面に反映された模様・色は、新候補の「アニメーション」で「全動作・全方向を生成」すると動作へ引き継がれます。'}</p>
  </section></div>}
- <footer className="shared-edit-footer"><button className="button" disabled={busy} onClick={onClose}>戻る</button><button className="button primary" disabled={busy||!result||(!result.transferred.length&&!shapeChanged)} onClick={()=>void apply()}>{busy?<Loader2 size={16} className="spin"/>:<Check size={16}/>}全方向の新候補を保存</button></footer>
- </DialogContent></Dialog>;
+ <footer className="shared-edit-footer"><button className="button" disabled={busy} onClick={onDone}>ドットに戻る</button><button className="button primary" disabled={busy||locked||!result||(!result.transferred.length&&!shapeChanged)} onClick={()=>void apply()}>{busy?<Loader2 size={16} className="spin"/>:<Check size={16}/>}全方向の新候補を保存</button></footer>
+ </section>;
 }

@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./shell.css";
+import { StudioProvider } from "@/components/studio/studio-provider";
+import { getChatGPTUser } from "./chatgpt-auth";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Dotch Dot Pot — ドット絵制作室",
@@ -10,14 +15,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await getChatGPTUser();
   return (
     <html lang="ja">
-      <body className="antialiased">{children}</body>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+        />
+      </head>
+      <body className="antialiased">
+        <StudioProvider signedIn={!!user}>{children}</StudioProvider>
+      </body>
     </html>
   );
 }
